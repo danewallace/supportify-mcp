@@ -151,6 +151,40 @@
             margin-top: 0.9375rem;
         }
 
+        var {
+            font-style: normal;
+            font-weight: 500;
+            font-family: var(--font-mono);
+            color: var(--accent);
+        }
+
+        .icon {
+            width: 1rem;
+            height: 1rem;
+            vertical-align: middle;
+            padding-bottom: 0.125rem;
+        }
+
+        .install-button img {
+            display: inline-block;
+            border-radius: 0.5rem;
+            border: 1px solid transparent;
+            transition: border 0.2s, background 0.2s;
+        }
+
+        .install-button img:hover {
+            text-decoration: none;
+            border: 1px solid var(--accent);
+        }
+
+        figure {
+            margin: 0;
+        }
+
+        #clients {
+            margin-top: 1.5rem;
+        }
+
         #mcp ul {
             display: flex;
             flex-direction: column;
@@ -172,6 +206,112 @@
             color: var(--text);
             display: inline-block;
             padding-bottom: 0.5rem;
+        }
+
+        #clients .editor-config {
+            margin-top: 1.5rem;
+        }
+
+        #clients .config-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        #clients .interface-tabs,
+        #clients .client-tabs {
+            background: var(--surface-inset);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+
+        #clients .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #clients .tab-button {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        #clients .tab-button:hover {
+            color: var(--text);
+            background: var(--surface-inset-deep);
+        }
+
+        #clients .tab-button.active {
+            color: var(--text);
+            border-bottom-color: var(--accent);
+            background: var(--surface);
+        }
+
+        #clients .tab-content {
+            position: relative;
+        }
+
+        #clients .tab-pane {
+            display: none;
+            padding: 1.5rem;
+        }
+
+        #clients .tab-pane.active {
+            display: block;
+        }
+
+        #clients .tab-pane h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+
+        #clients .tab-pane h4 {
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        #clients .tab-pane ol {
+            margin: 0.75rem 0;
+            padding-left: 1.5rem;
+        }
+
+        #clients .tab-pane li {
+            margin-bottom: 0.5rem;
+        }
+
+        #clients .tab-pane p {
+            margin: 0.75rem 0;
+        }
+
+        #clients .tab-pane em {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            #clients .tab-buttons {
+                flex-direction: column;
+            }
+
+            #clients .tab-button {
+                border-bottom: 1px solid var(--border);
+                border-right: none;
+            }
+
+            #clients .tab-button.active {
+                border-bottom-color: var(--border);
+                border-right: 2px solid var(--accent);
+            }
         }
 
         .tagline {
@@ -251,6 +391,10 @@
             color: var(--link);
             text-decoration: none;
             transition: color 0.2s ease;
+        }
+
+        a picture {
+            cursor: pointer;
         }
 
         a:hover {
@@ -365,6 +509,23 @@
                     console.log('Audio playback failed:', error);
                 });
             });
+
+            // Client tabs (Cursor, VSCode, etc.)
+            const clientTabButtons = document.querySelectorAll('.client-tabs .tab-button');
+            const clientTabPanes = document.querySelectorAll('.client-tabs .tab-pane');
+            clientTabButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    const targetTab = this.getAttribute('data-tab');
+
+                    // Remove active class from all client buttons and panes
+                    clientTabButtons.forEach(btn => btn.classList.remove('active'));
+                    clientTabPanes.forEach(pane => pane.classList.remove('active'));
+
+                    // Add active class to clicked button and corresponding pane
+                    this.classList.add('active');
+                    document.getElementById(targetTab + '-tab').classList.add('active');
+                });
+            });
         });
     </script>
 </head>
@@ -439,14 +600,116 @@
             </section>
         </section>
 
+
+
         <section id="mcp">
             <header>
                 <h2>MCP Usage</h2>
                 <p>
                     Connect your <abbr title="Model Context Protocol">MCP</abbr> client to
-                    <code>https://sosumi.ai/mcp</code>:
+                    <code>https://sosumi.ai/mcp</code>.
                 </p>
-                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
+
+                <figure id="clients">
+                    <div class="client-tabs">
+                        <div class="tab-buttons">
+                            <button class="tab-button active" data-tab="copilot-xcode">GitHub Copilot for Xcode</button>
+                            <button class="tab-button" data-tab="cursor">Cursor</button>
+                            <button class="tab-button" data-tab="vscode">VSCode</button>
+                            <button class="tab-button" data-tab="claude-desktop">Claude Desktop</button>
+                            <button class="tab-button" data-tab="other">Other</button>
+                        </div>
+
+                        <div class="tab-content">
+                            <div class="tab-pane active" id="copilot-xcode-tab">
+                                <h3>GitHub Copilot for Xcode</h3>
+                                <ol>
+                                    <li>Open <strong>GitHub Copilot for Xcode</strong> and go to
+                                        <strong>Settings…</strong>
+                                    </li>
+                                    <li>Select the <strong>MCP</strong> tab</li>
+                                    <li>Click <span>
+                                            <img class="icon" src="/icons/square.and.pencil.svg" alt="Edit Config"
+                                                width="16" height="16" />
+                                            Edit Config
+                                        </span></li>
+                                    <li>Enter the following configuration:</li>
+                                </ol>
+                                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
+<span class="dimmed">  <span class="key">"servers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>  <span class="sosumi-entry">    <span class="key">"sosumi"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+      <span class="key">"type"</span><span class="punctuation">:</span> <span class="string">"http"</span><span class="punctuation">,</span>
+      <span class="key">"url"</span><span class="punctuation">:</span> <span class="string">"https://sosumi.ai/mcp"</span>
+    <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
+<span class="dimmed"><span class="punctuation">}</span></span></code></pre>
+                                <p>For more information, see the <a href="https://github.com/github/CopilotForXcode"
+                                        rel="noopener noreferrer">GitHub Copilot for Xcode README</a>.</p>
+                            </div>
+
+                            <div class="tab-pane" id="cursor-tab">
+                                <h3>Cursor</h3>
+                                <p>Click the button below to automatically install the sosumi MCP server:</p>
+
+                                <a class="install-button"
+                                    href="cursor://anysphere.cursor-deeplink/mcp/install?name=sosumi&config=eyJ0eXBlIjoiaHR0cCIsInVybCI6Imh0dHBzOi8vc29zdW1pLmFpL21jcCJ9">
+                                    <picture>
+                                        <source srcset="https://cursor.com/deeplink/mcp-install-light.svg"
+                                            media="(prefers-color-scheme: light)">
+                                        <source srcset="https://cursor.com/deeplink/mcp-install-dark.svg"
+                                            media="(prefers-color-scheme: dark)">
+                                        <img src="https://cursor.com/deeplink/mcp-install-dark.svg"
+                                            alt="Add sosumi MCP server to Cursor" height="32" />
+                                    </picture>
+                                </a>
+
+                                <p>For more information, see the <a href="https://www.cursor.com/docs/install-mcp"
+                                        rel="noopener noreferrer">Cursor documentation</a>.</p>
+                            </div>
+
+                            <div class="tab-pane" id="vscode-tab">
+                                <h3>VSCode</h3>
+                                <p>Create a <code>.vscode/mcp.json</code> file in your workspace and enter the following
+                                    configuration:</p>
+
+                                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
+<span class="dimmed">  <span class="key">"servers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>  <span class="sosumi-entry">    <span class="key">"sosumi"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+      <span class="key">"type"</span><span class="punctuation">:</span> <span class="string">"http"</span><span class="punctuation">,</span>
+      <span class="key">"url"</span><span class="punctuation">:</span> <span class="string">"https://sosumi.ai/mcp"</span>
+    <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
+<span class="dimmed"><span class="punctuation">}</span></span></code></pre>
+
+                                <p>For more information, see the <a
+                                        href="https://code.visualstudio.com/docs/copilot/customization/mcp-servers"
+                                        rel="noopener noreferrer">VSCode documentation</a>.</p>
+                            </div>
+
+                            <div class="tab-pane" id="claude-desktop-tab">
+                                <h3>Claude Desktop</h3>
+                                <ol>
+                                    <li>Open <strong>Claude Desktop</strong></li>
+                                    <li>Go to <strong>Settings → Connectors</strong></li>
+                                    <li>Click <strong>"Add custom connector"</strong></li>
+                                    <li>Set <strong>"Name"</strong> to <var>sosumi</var></li>
+                                    <li>Set <strong>"Remote MCP server URL"</strong> to
+                                        <var>https://sosumi.ai/mcp</var>
+                                    </li>
+                                    <li>Click "Add"</li>
+                                </ol>
+                                <p>See the <a
+                                        href="https://support.anthropic.com/en/articles/11725091-when-to-use-desktop-and-web-connectors"
+                                        rel="noopener noreferrer">Claude Desktop documentation</a> for more information.
+                                </p>
+                            </div>
+
+                            <div class="tab-pane" id="other-tab">
+                                <h3>Other MCP Clients</h3>
+                                <p>Sosumi's MCP server supports Streamable HTTP and Server-Sent Events (SSE) transport.
+                                    If your client supports either of these,
+                                    configure it to connect directly to <code>https://sosumi.ai/mcp</code>.</p>
+
+                                <p>Otherwise,
+                                    you can run this command to proxy over stdio:</p>
+
+                                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
 <span class="dimmed">  <span class="key">"mcpServers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>
 <span class="sosumi-entry">    <span class="key">"sosumi"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
       <span class="key">"command"</span><span class="punctuation">:</span> <span class="string">"npx"</span><span class="punctuation">,</span>
@@ -457,7 +720,12 @@
       <span class="punctuation">]</span>
     <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
 <span class="dimmed"><span class="punctuation">}</span></span></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </figure>
             </header>
+
 
             <div class="resources">
                 <h3>Available Resources</h3>
@@ -466,7 +734,8 @@
                         <dl>
                             <dt><code>doc://{path}</code></dt>
                             <dd><strong>Apple Developer documentation in Markdown format</strong>
-                                <br><em>Example: <code>doc://swift/array</code> returns Swift Array documentation</em>
+                                <br><em>Example: <code>doc://swift/array</code> returns Swift Array
+                                    documentation</em>
                             </dd>
                         </dl>
                     </li>
@@ -497,19 +766,21 @@
                     </li>
                 </ul>
             </div>
+        </section>
 
-            <div class="troubleshooting">
-                <h3>Troubleshooting</h3>
-                <p>
-                    If you're experiencing connection timeouts or network issues with the MCP server,
-                    you may need to configure a proxy.
-                    This is particularly common in corporate environments
-                    or regions with restricted internet access.
-                </p>
-                <p>
-                    Configure your MCP client to use a proxy by adding environment variables:
-                </p>
-                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
+
+        <div class="troubleshooting">
+            <h3>Troubleshooting</h3>
+            <p>
+                If you're experiencing connection timeouts or network issues with the MCP server,
+                you may need to configure a proxy.
+                This is particularly common in corporate environments
+                or regions with restricted internet access.
+            </p>
+            <p>
+                Configure your MCP client to use a proxy by adding environment variables:
+            </p>
+            <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
 <span class="dimmed">  <span class="key">"mcpServers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>
 <span class="sosumi-entry">    <span class="key">"sosumi"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
       <span class="key">"command"</span><span class="punctuation">:</span> <span class="string">"npx"</span><span class="punctuation">,</span>
@@ -524,12 +795,12 @@
       <span class="punctuation">}</span>
     <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
 <span class="dimmed"><span class="punctuation">}</span></span></code></pre>
-                <p>
-                    Replace <code>proxy.example.com:8080</code> with your actual proxy server details.
-                    For authenticated proxies, use the format:
-                    <code>http://username:password@proxy.example.com:8080</code>
-                </p>
-            </div>
+            <p>
+                Replace <code>proxy.example.com:8080</code> with your actual proxy server details.
+                For authenticated proxies, use the format:
+                <code>http://username:password@proxy.example.com:8080</code>
+            </p>
+        </div>
         </section>
     </main>
 
