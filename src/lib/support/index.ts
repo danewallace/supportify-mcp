@@ -6,6 +6,8 @@
 export { fetchSupportGuidePage, parseSupportGuideHTML } from "./fetch"
 export { renderSupportGuideMarkdown } from "./render"
 export type { SupportGuideMetadata, ParsedContent } from "./types"
+export { fetchTableOfContents, searchToc, findTopic } from "./toc"
+export type { TocItem, TocSection } from "./toc"
 
 /**
  * Main function to fetch and render a support guide page
