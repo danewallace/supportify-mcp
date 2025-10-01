@@ -1,7 +1,7 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
 
-import { fetchAndRenderSupportGuide } from "./support"
+import { fetchAndRenderSupportGuide, fetchTableOfContents, searchToc } from "./support"
 
 export function createMcpServer() {
   const server = new McpServer({
@@ -58,13 +58,94 @@ export function createMcpServer() {
     },
   )
 
-  // Register fetch support guide tool
+  // Register search tool (use this FIRST to find the right page)
+  server.registerTool(
+    "searchAppleSupportGuide",
+    {
+      title: "Search Apple Support Guides",
+      description:
+        "Search for topics in Apple Platform Security or Deployment guides. Use this FIRST to find the correct page slug before fetching content.",
+      inputSchema: {
+        guide: z
+          .enum(["security", "deployment"])
+          .describe('Guide name: "security" or "deployment"'),
+        query: z
+          .string()
+          .describe(
+            "Search query (e.g., 'declarative device management', 'secure enclave', 'enrollment')",
+          ),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ guide, query }) => {
+      try {
+        const toc = await fetchTableOfContents(guide)
+        const results = searchToc(toc, query)
+
+        if (results.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `No results found for "${query}" in the ${guide} guide.`,
+              },
+            ],
+          }
+        }
+
+        // Format results as markdown
+        let markdown = `# Search Results: "${query}" in ${guide} guide\n\n`
+        markdown += `Found ${results.length} result${results.length === 1 ? "" : "s"}:\n\n`
+
+        for (const result of results.slice(0, 10)) {
+          // Limit to top 10
+          markdown += `## ${result.title}\n`
+          markdown += `- **Slug**: \`${result.slug}\`\n`
+          markdown += `- **URL**: ${result.url}\n\n`
+        }
+
+        if (results.length > 10) {
+          markdown += `\n*Showing top 10 of ${results.length} results*\n`
+        }
+
+        markdown += `\n---\n\n**Next step**: Use the \`fetchAppleSupportGuide\` tool with the slug from the most relevant result above.\n`
+        markdown += `For example: \`fetchAppleSupportGuide({ guide: "${guide}", path: "${results[0].slug}" })\`\n`
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error searching ${guide} guide for "${query}": ${errorMessage}`,
+            },
+          ],
+        }
+      }
+    },
+  )
+
+  // Register fetch support guide tool (use AFTER searching)
   server.registerTool(
     "fetchAppleSupportGuide",
     {
-      title: "Fetch Apple Support Guide",
+      title: "Fetch Apple Support Guide Page",
       description:
-        "Fetch Apple Platform Security or Deployment guide by path and return as markdown",
+        "Fetch specific Apple Platform Security or Deployment guide page by slug and return as markdown. Use searchAppleSupportGuide first to find the correct slug.",
       inputSchema: {
         guide: z
           .enum(["security", "deployment"])
@@ -72,7 +153,7 @@ export function createMcpServer() {
         path: z
           .string()
           .describe(
-            "Page path/slug (e.g., 'welcome', 'intro-to-apple-platform-security-seccd5016d31')",
+            "Page slug from search results (e.g., 'depb1bab77f8', 'sec59b0b31ff'). Get this from searchAppleSupportGuide first.",
           ),
       },
       annotations: {
@@ -105,7 +186,7 @@ export function createMcpServer() {
           content: [
             {
               type: "text" as const,
-              text: `Error fetching content for "${guide}/${path}": ${errorMessage}`,
+              text: `Error fetching content for "${guide}/${path}": ${errorMessage}\n\nTip: Use searchAppleSupportGuide first to find the correct page slug.`,
             },
           ],
         }
