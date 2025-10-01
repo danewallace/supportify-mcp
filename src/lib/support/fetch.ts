@@ -66,6 +66,8 @@ class SupportGuideParser {
   private isInFooter = false
   private isInRelatedLinks = false
   private skipContent = false
+  private seenTextInContext = new Set<string>()
+  private isInContentSection = false
   
   getResult(): ParsedContent {
     return {
@@ -112,17 +114,28 @@ class SupportGuideParser {
     
     if (!this.isInMainContent || this.skipContent) return
     
+    // Track when we enter a content section (Subhead divs, Feature divs, etc.)
+    if ((className.includes("Subhead") || className.includes("Feature") || className.includes("Outro")) && element.tagName === "div") {
+      this.isInContentSection = true
+    }
+    
+    // Only process headings if we're in a content section
     // Headings (h1 for page title, h2-h4 for sections)
-    if (element.tagName === "h1" || element.tagName === "h2" || element.tagName === "h3" || element.tagName === "h4") {
-      this.isInHeading = true
-      const level = element.tagName === "h1" ? "#" : element.tagName === "h2" ? "##" : element.tagName === "h3" ? "###" : "####"
-      this.body.push(`\n\n${level} `)
+    if ((element.tagName === "h1" || element.tagName === "h2" || element.tagName === "h3" || element.tagName === "h4") && (this.isInContentSection || element.tagName === "h1")) {
+      if (!this.isInHeading) {  // Prevent nested heading duplication
+        this.isInHeading = true
+        const level = element.tagName === "h1" ? "#" : element.tagName === "h2" ? "##" : element.tagName === "h3" ? "###" : "####"
+        this.body.push(`\n\n${level} `)
+      }
     }
     
     // Paragraphs (but skip if in footer or related links, and skip toc items)
-    if (element.tagName === "p" && !this.isInFooter && !this.isInRelatedLinks && !className.includes("toc")) {
-      this.isInParagraph = true
-      this.body.push("\n\n")
+    // Only process if we're in a content section
+    if (element.tagName === "p" && !this.isInFooter && !this.isInRelatedLinks && !className.includes("toc") && this.isInContentSection) {
+      if (!this.isInParagraph) {  // Prevent nested paragraph duplication
+        this.isInParagraph = true
+        this.body.push("\n\n")
+      }
     }
     
     // Lists
@@ -131,8 +144,10 @@ class SupportGuideParser {
     }
     
     if (element.tagName === "li" && !className.includes("globalnav")) {
-      this.isInListItem = true
-      this.body.push("\n- ")
+      if (!this.isInListItem) {  // Prevent nested list item duplication
+        this.isInListItem = true
+        this.body.push("\n- ")
+      }
     }
     
     // Code/inline code
@@ -202,37 +217,50 @@ class SupportGuideParser {
     
     if (!this.isInMainContent || this.skipContent) return
     
-    // Add content to body (only for main content area)
-    if (this.isInHeading || this.isInParagraph || this.isInListItem || this.isInLink || this.isInCode || this.isInStrong || this.isInEmphasis) {
-      this.body.push(content)
+    // Create a unique key for this text in its context to prevent duplicates
+    const contextKey = `${this.isInHeading ? 'h' : ''}${this.isInParagraph ? 'p' : ''}${this.isInListItem ? 'l' : ''}-${content.trim()}`
+    
+    // Skip if we've already seen this exact text in this context
+    if (this.seenTextInContext.has(contextKey) && !this.isInLink && !this.isInCode && !this.isInStrong && !this.isInEmphasis) {
+      return
     }
     
-    // Close inline formatting
-    if (this.isInCode && text.lastInText) {
-      this.body.push("`")
-      this.isInCode = false
+    // Add content if we're in any content state
+    if (this.isInHeading || this.isInParagraph || this.isInListItem || this.isInLink || this.isInCode || this.isInStrong || this.isInEmphasis) {
+      this.body.push(content)
+      if (!this.isInLink && !this.isInCode && !this.isInStrong && !this.isInEmphasis) {
+        this.seenTextInContext.add(contextKey)
+      }
     }
-    if (this.isInStrong && text.lastInText) {
-      this.body.push("**")
-      this.isInStrong = false
-    }
-    if (this.isInEmphasis && text.lastInText) {
-      this.body.push("*")
-      this.isInEmphasis = false
-    }
-    if (this.isInLink && text.lastInText) {
-      this.body.push(`](${this.currentLinkHref})`)
-      this.isInLink = false
-      this.currentLinkHref = ""
-    }
-    if (this.isInHeading && text.lastInText) {
-      this.isInHeading = false
-    }
-    if (this.isInParagraph && text.lastInText) {
-      this.isInParagraph = false
-    }
-    if (this.isInListItem && text.lastInText) {
-      this.isInListItem = false
+    
+    // Close inline formatting only on lastInText
+    if (text.lastInText) {
+      if (this.isInCode) {
+        this.body.push("`")
+        this.isInCode = false
+      }
+      if (this.isInStrong) {
+        this.body.push("**")
+        this.isInStrong = false
+      }
+      if (this.isInEmphasis) {
+        this.body.push("*")
+        this.isInEmphasis = false
+      }
+      if (this.isInLink) {
+        this.body.push(`](${this.currentLinkHref})`)
+        this.isInLink = false
+        this.currentLinkHref = ""
+      }
+      if (this.isInHeading) {
+        this.isInHeading = false
+      }
+      if (this.isInParagraph) {
+        this.isInParagraph = false
+      }
+      if (this.isInListItem) {
+        this.isInListItem = false
+      }
     }
   }
 }
@@ -244,36 +272,9 @@ class SupportGuideParser {
  * @returns Parsed content
  */
 export async function parseSupportGuideHTML(html: string): Promise<ParsedContent> {
-  const parser = new SupportGuideParser()
-  
-  const rewriter = new HTMLRewriter()
-    .on("h1", parser)
-    .on("h2", parser)
-    .on("h3", parser)
-    .on("h4", parser)
-    .on("p", parser)
-    .on("ul", parser)
-    .on("li", parser)
-    .on("code", parser)
-    .on("strong", parser)
-    .on("b", parser)
-    .on("em", parser)
-    .on("i", parser)
-    .on("a", parser)
-    .on("footer", parser)
-    .on("body", parser)
-    .on("div", parser)
-  
-  // Create a Response from the HTML string
-  const response = new Response(html, {
-    headers: { "Content-Type": "text/html" },
-  })
-  
-  const transformedResponse = rewriter.transform(response)
-  
-  // Consume the response to trigger parsing
-  await transformedResponse.text()
-  
-  return parser.getResult()
+  // Use the simple regex-based parser instead of HTMLRewriter
+  // This avoids duplicate content from nested HTML elements
+  const { parseAppleSupportHTML } = await import("./simple-parser")
+  return parseAppleSupportHTML(html)
 }
 
