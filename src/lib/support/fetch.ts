@@ -79,14 +79,24 @@ class SupportGuideParser {
   element(element: Element) {
     // Skip navigation and other non-content areas
     const className = element.getAttribute("class") || ""
+    const id = element.getAttribute("id") || ""
+    
+    // Skip navigation, footers, and hidden content
     if (
       className.includes("globalnav") ||
       className.includes("localnav") ||
       className.includes("ac-gn") ||
-      className.includes("footer")
+      (className.includes("footer") && element.tagName === "div") ||
+      id.includes("toc-hidden") ||
+      id === "modal-toc-container"
     ) {
       this.skipContent = true
       return
+    }
+    
+    // Reset skip content when entering main content
+    if (element.tagName === "body" || id === "content-section") {
+      this.skipContent = false
     }
     
     // Extract title from h1
@@ -94,23 +104,23 @@ class SupportGuideParser {
       this.isInTitle = true
     }
     
-    // Main content body - only process content inside the AppleTopic body
-    if (element.tagName === "body" && className.includes("AppleTopic")) {
+    // Main content body - only process content inside the apd-topic body
+    if (element.tagName === "body" && (className.includes("apd-topic") || className.includes("AppleTopic"))) {
       this.isInMainContent = true
       this.skipContent = false
     }
     
     if (!this.isInMainContent || this.skipContent) return
     
-    // Headings
-    if (element.tagName === "h2" || element.tagName === "h3" || element.tagName === "h4") {
+    // Headings (h1 for page title, h2-h4 for sections)
+    if (element.tagName === "h1" || element.tagName === "h2" || element.tagName === "h3" || element.tagName === "h4") {
       this.isInHeading = true
-      const level = element.tagName === "h2" ? "##" : element.tagName === "h3" ? "###" : "####"
+      const level = element.tagName === "h1" ? "#" : element.tagName === "h2" ? "##" : element.tagName === "h3" ? "###" : "####"
       this.body.push(`\n\n${level} `)
     }
     
-    // Paragraphs
-    if (element.tagName === "p" && !this.isInFooter && !this.isInRelatedLinks) {
+    // Paragraphs (but skip if in footer or related links, and skip toc items)
+    if (element.tagName === "p" && !this.isInFooter && !this.isInRelatedLinks && !className.includes("toc")) {
       this.isInParagraph = true
       this.body.push("\n\n")
     }
