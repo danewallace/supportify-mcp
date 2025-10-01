@@ -23,5 +23,8 @@
   },
   "vars": {
     "NODE_ENV": "production"
+  },
+  "dev": {
+    "port": 51345
   }
 }

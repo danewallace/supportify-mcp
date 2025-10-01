@@ -5,6 +5,11 @@
 import { getRandomUserAgent, NotFoundError } from "../fetch"
 import type { ParsedContent } from "./types"
 
+// Cache for fetched pages (guide/path -> {html, timestamp})
+const PAGE_CACHE: Map<string, { html: string; timestamp: number }> = new Map()
+const CACHE_DURATION = 1000 * 60 * 60 * 24 // 24 hours
+const MAX_CACHE_SIZE = 100 // Limit cache size to prevent memory issues
+
 /**
  * Fetch Apple Support guide page HTML
  * 
@@ -19,17 +24,29 @@ export async function fetchSupportGuidePage(
   // Normalize the path - remove leading/trailing slashes
   const normalizedPath = path.replace(/^\/+|\/+$/g, "")
   
+  // Check cache first
+  const cacheKey = `${guide}/${normalizedPath}`
+  const cached = PAGE_CACHE.get(cacheKey)
+  const now = Date.now()
+  
+  if (cached && now - cached.timestamp < CACHE_DURATION) {
+    console.log(`✓ Cache hit for ${cacheKey}`)
+    return cached.html
+  }
+  
   // Construct the full URL
   const url = `https://support.apple.com/guide/${guide}/${normalizedPath}/web`
   
+  console.log(`⟳ Fetching ${cacheKey}...`)
   const userAgent = getRandomUserAgent()
   
   const response = await fetch(url, {
     headers: {
       "User-Agent": userAgent,
       Accept: "text/html",
-      "Cache-Control": "no-cache",
     },
+    // Add timeout to prevent hanging
+    signal: AbortSignal.timeout(15000), // 15 second timeout
   })
   
   if (!response.ok) {
@@ -40,7 +57,18 @@ export async function fetchSupportGuidePage(
     throw new Error(`Failed to fetch support guide page: ${response.status} ${response.statusText}`)
   }
   
-  return await response.text()
+  const html = await response.text()
+  
+  // Add to cache (with LRU eviction if needed)
+  if (PAGE_CACHE.size >= MAX_CACHE_SIZE) {
+    // Remove oldest entry
+    const firstKey = PAGE_CACHE.keys().next().value
+    PAGE_CACHE.delete(firstKey)
+  }
+  PAGE_CACHE.set(cacheKey, { html, timestamp: now })
+  console.log(`✓ Cached ${cacheKey}`)
+  
+  return html
 }
 
 /**
