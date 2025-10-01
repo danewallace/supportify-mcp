@@ -6,15 +6,8 @@ import { HTTPException } from "hono/http-exception"
 import { trimTrailingSlash } from "hono/trailing-slash"
 
 import { NotFoundError } from "./lib/fetch"
-import {
-  fetchHIGPageData,
-  fetchHIGTableOfContents,
-  renderHIGFromJSON,
-  renderHIGTableOfContents,
-} from "./lib/hig"
 import { createMcpServer } from "./lib/mcp"
-import { fetchJSONData, renderFromJSON } from "./lib/reference"
-import { generateAppleDocUrl, isValidAppleDocUrl, normalizeDocumentationPath } from "./lib/url"
+import { fetchAndRenderSupportGuide } from "./lib/support"
 
 interface Env {
   ASSETS: Fetcher
@@ -49,7 +42,7 @@ app.use(trimTrailingSlash())
 app.use("*", async (c, next) => {
   if (c.env.NODE_ENV !== "development") {
     cache({
-      cacheName: "sosumi-cache",
+      cacheName: "supportify-cache",
       cacheControl: "max-age=86400", // 24 hours
     })
   }
@@ -63,34 +56,33 @@ app.all("/mcp", async (c) => {
   return transport.handleRequest(c)
 })
 
-app.get("/documentation/*", async (c) => {
-  const path = c.req.path
+// Main route for support guides: /guide/{guide-name}/{path}
+app.get("/guide/:guide/:path{.+}", async (c) => {
+  const guide = c.req.param("guide")
+  const path = c.req.param("path")
 
-  // Normalize path and generate Apple Developer URL
-  const normalizedPath = normalizeDocumentationPath(path.replace("/documentation/", ""))
-  const appleUrl = generateAppleDocUrl(normalizedPath)
-
-  // Validate the URL is a proper Apple documentation URL
-  if (!isValidAppleDocUrl(appleUrl)) {
+  // Validate guide name
+  if (guide !== "security" && guide !== "deployment") {
     const errorResponse = new Response(
-      `# Invalid Apple Documentation URL
+      `# Invalid Guide Name
 
-The URL \`${appleUrl}\` is not a valid Apple Developer documentation page.
+The guide \`${guide}\` is not supported.
 
-## Supported URL Patterns
+## Supported Guides
 
-This service only works with Apple Developer documentation URLs:
+This service works with Apple Platform guides:
 
-- \`https://developer.apple.com/documentation/*\`
+- \`security\` - Apple Platform Security Guide
+- \`deployment\` - Apple Platform Deployment Guide
 
 ## Examples
 
-- [Swift Documentation](https://sosumi.ai/documentation/swift)
-- [SwiftUI Documentation](https://sosumi.ai/documentation/swiftui)
-- [UIKit Documentation](https://sosumi.ai/documentation/uikit)
+- [Security Guide - Welcome](https://supportify.local/guide/security/welcome)
+- [Security Guide - Intro](https://supportify.local/guide/security/intro-to-apple-platform-security-seccd5016d31)
+- [Deployment Guide - Welcome](https://supportify.local/guide/deployment/welcome)
 
 ---
-*[sosumi.ai](https://sosumi.ai) - Making Apple docs AI-readable*`,
+*Making Apple Support guides AI-readable*`,
       {
         status: 400,
         headers: { "Content-Type": "text/markdown; charset=utf-8" },
@@ -99,119 +91,88 @@ This service only works with Apple Developer documentation URLs:
     throw new HTTPException(400, { res: errorResponse })
   }
 
-  const jsonData = await fetchJSONData(path)
-  const markdown = await renderFromJSON(jsonData, appleUrl)
+  try {
+    const sourceUrl = `https://support.apple.com/guide/${guide}/${path}/web`
+    const markdown = await fetchAndRenderSupportGuide(guide, path, sourceUrl)
 
-  // Validate that we got meaningful content
-  if (!markdown || markdown.trim().length < 100) {
-    throw new HTTPException(502, {
-      message:
-        "The Apple documentation page loaded but contained insufficient content. This may be a temporary issue with the page.",
-    })
+    // Validate that we got meaningful content
+    if (!markdown || markdown.trim().length < 100) {
+      throw new HTTPException(502, {
+        message:
+          "The Apple Support guide page loaded but contained insufficient content. This may be a temporary issue with the page.",
+      })
+    }
+
+    const headers = {
+      "Content-Type": "text/markdown; charset=utf-8",
+      "Content-Location": sourceUrl,
+      "Cache-Control": "public, max-age=3600, s-maxage=86400",
+      ETag: `"${Buffer.from(markdown).toString("base64").slice(0, 16)}"`,
+      "Last-Modified": new Date().toUTCString(),
+    }
+
+    if (c.req.header("Accept")?.includes("application/json")) {
+      return c.json(
+        {
+          url: sourceUrl,
+          content: markdown,
+        },
+        200,
+        { ...headers, "Content-Type": "application/json; charset=utf-8" },
+      )
+    }
+
+    return c.text(markdown, 200, headers)
+  } catch (error) {
+    if (error instanceof HTTPException) {
+      throw error
+    }
+    if (error instanceof NotFoundError) {
+      throw new HTTPException(404, {
+        message: `The requested Apple Support guide page does not exist: ${guide}/${path}`,
+      })
+    }
+    throw error
   }
-
-  const headers = {
-    "Content-Type": "text/markdown; charset=utf-8",
-    "Content-Location": appleUrl,
-    "Cache-Control": "public, max-age=3600, s-maxage=86400",
-    ETag: `"${Buffer.from(markdown).toString("base64").slice(0, 16)}"`,
-    "Last-Modified": new Date().toUTCString(),
-  }
-
-  if (c.req.header("Accept")?.includes("application/json")) {
-    return c.json(
-      {
-        url: appleUrl,
-        content: markdown,
-      },
-      200,
-      { ...headers, "Content-Type": "application/json; charset=utf-8" },
-    )
-  }
-
-  return c.text(markdown, 200, {
-    ...headers,
-    "Content-Type": "text/markdown; charset=utf-8",
-  })
 })
 
-app.get("/design/human-interface-guidelines", async (c) => {
-  // Handle the table of contents for HIG
-  const tocData = await fetchHIGTableOfContents()
-  const markdown = await renderHIGTableOfContents(tocData)
+// Root route with information
+app.get("/", (c) => {
+  return c.text(
+    `# Supportify
 
-  // Validate that we got meaningful content
-  if (!markdown || markdown.trim().length < 100) {
-    throw new HTTPException(502, {
-      message:
-        "The HIG table of contents loaded but contained insufficient content. This may be a temporary issue.",
-    })
-  }
+Making Apple Support guides AI-readable.
 
-  const sourceUrl = "https://developer.apple.com/design/human-interface-guidelines/"
-  const headers = {
-    "Content-Type": "text/markdown; charset=utf-8",
-    "Content-Location": sourceUrl,
-    "Cache-Control": "public, max-age=3600, s-maxage=86400",
-    ETag: `"${Buffer.from(markdown).toString("base64").slice(0, 16)}"`,
-    "Last-Modified": new Date().toUTCString(),
-  }
+## Supported Guides
 
-  if (c.req.header("Accept")?.includes("application/json")) {
-    return c.json(
-      {
-        url: sourceUrl,
-        content: markdown,
-      },
-      200,
-      { ...headers, "Content-Type": "application/json; charset=utf-8" },
-    )
-  }
+- **Security** - Apple Platform Security Guide
+- **Deployment** - Apple Platform Deployment Guide
 
-  return c.text(markdown, 200, headers)
-})
+## Usage
 
-app.get("/design/human-interface-guidelines/:path{.+}", async (c) => {
-  const higPath = c.req.param("path")
-  if (!higPath) {
-    // This should be caught by the route above, but just in case
-    throw new HTTPException(400, {
-      message: "Invalid HIG path",
-    })
-  }
+### HTTP API
 
-  const jsonData = await fetchHIGPageData(higPath)
-  const sourceUrl = `https://developer.apple.com/design/human-interface-guidelines/${higPath}`
-  const markdown = await renderHIGFromJSON(jsonData, sourceUrl)
+Access support guide pages using:
 
-  // Validate that we got meaningful content
-  if (!markdown || markdown.trim().length < 100) {
-    throw new HTTPException(502, {
-      message:
-        "The HIG page loaded but contained insufficient content. This may be a temporary issue with the page.",
-    })
-  }
+\`\`\`
+/guide/{guide-name}/{page-path}
+\`\`\`
 
-  const headers = {
-    "Content-Type": "text/markdown; charset=utf-8",
-    "Content-Location": sourceUrl,
-    "Cache-Control": "public, max-age=3600, s-maxage=86400",
-    ETag: `"${Buffer.from(markdown).toString("base64").slice(0, 16)}"`,
-    "Last-Modified": new Date().toUTCString(),
-  }
+### Examples
 
-  if (c.req.header("Accept")?.includes("application/json")) {
-    return c.json(
-      {
-        url: sourceUrl,
-        content: markdown,
-      },
-      200,
-      { ...headers, "Content-Type": "application/json; charset=utf-8" },
-    )
-  }
+- [Security Guide - Welcome](/guide/security/welcome)
+- [Security Guide - Intro](/guide/security/intro-to-apple-platform-security-seccd5016d31)
+- [Deployment Guide - Welcome](/guide/deployment/welcome)
 
-  return c.text(markdown, 200, headers)
+### MCP Integration
+
+Connect to \`/mcp\` endpoint for Model Context Protocol support.
+
+---
+*Making Apple Support guides AI-readable*`,
+    200,
+    { "Content-Type": "text/markdown; charset=utf-8" },
+  )
 })
 
 // Catch-all route for any other requests - returns 404
@@ -221,11 +182,19 @@ app.all("*", (c) => {
 
 The requested resource was not found on this server.
 
-This service only works with Apple Developer documentation URLs:
-- \`https://sosumi.ai/documentation/*\`
+This service works with Apple Platform guides:
+
+- \`/guide/security/{path}\` - Apple Platform Security Guide
+- \`/guide/deployment/{path}\` - Apple Platform Deployment Guide
+
+## Examples
+
+- [Security Guide - Welcome](/guide/security/welcome)
+- [Security Guide - Intro](/guide/security/intro-to-apple-platform-security-seccd5016d31)
+- [Deployment Guide - Welcome](/guide/deployment/welcome)
 
 ---
-*[sosumi.ai](https://sosumi.ai) - Making Apple docs AI-readable*`,
+*Making Apple Support guides AI-readable*`,
     404,
     { "Content-Type": "text/markdown; charset=utf-8" },
   )
@@ -244,8 +213,8 @@ app.onError((err, c) => {
     if (accept?.includes("application/json")) {
       return c.json(
         {
-          error: "Documentation not found",
-          message: "The requested Apple Developer documentation page does not exist.",
+          error: "Support guide not found",
+          message: "The requested Apple Support guide page does not exist.",
         },
         404,
       )
@@ -254,22 +223,22 @@ app.onError((err, c) => {
     return c.text(
       `# Not Found
 
-The requested Apple Developer documentation page does not exist.
+The requested Apple Support guide page does not exist.
 
 ## What you can try:
 
 1. **Check the URL** - Make sure the path is correct
-2. **Browse from a parent page** - Try starting from a higher-level documentation page
-3. **Search Apple Developer Documentation** - Use Apple's official search
+2. **Check the guide name** - Use "security" or "deployment"
+3. **Browse from the welcome page** - Try starting from the guide's welcome page
 
 ## Examples of valid URLs:
 
-- [Swift Documentation](https://sosumi.ai/documentation/swift)
-- [SwiftUI Documentation](https://sosumi.ai/documentation/swiftui)
-- [UIKit Documentation](https://sosumi.ai/documentation/uikit)
+- [Security Guide - Welcome](/guide/security/welcome)
+- [Security Guide - Intro](/guide/security/intro-to-apple-platform-security-seccd5016d31)
+- [Deployment Guide - Welcome](/guide/deployment/welcome)
 
 ---
-*[sosumi.ai](https://sosumi.ai) - Making Apple docs AI-readable*`,
+*Making Apple Support guides AI-readable*`,
       404,
       { "Content-Type": "text/markdown; charset=utf-8" },
     )
@@ -296,19 +265,19 @@ We encountered an unexpected issue while processing your request.
 ## What you can try:
 
 1. **Wait a moment and try again** - This is often a temporary issue
-2. **Check the URL** - Make sure you're using a valid Apple Developer documentation URL
+2. **Check the URL** - Make sure you're using a valid Apple Support guide URL
 3. **Try a different page** - Some pages may have temporary issues
 
 ## Examples of valid URLs:
 
-- [Swift Documentation](https://sosumi.ai/documentation/swift)
-- [SwiftUI Documentation](https://sosumi.ai/documentation/swiftui)
-- [UIKit Documentation](https://sosumi.ai/documentation/uikit)
+- [Security Guide - Welcome](/guide/security/welcome)
+- [Security Guide - Intro](/guide/security/intro-to-apple-platform-security-seccd5016d31)
+- [Deployment Guide - Welcome](/guide/deployment/welcome)
 
-If this issue persists, please report it to <info@sosumi.ai>.
+If this issue persists, please report it.
 
 ---
-*[sosumi.ai](https://sosumi.ai) - Making Apple docs AI-readable*`,
+*Making Apple Support guides AI-readable*`,
     500,
     { "Content-Type": "text/markdown; charset=utf-8" },
   )

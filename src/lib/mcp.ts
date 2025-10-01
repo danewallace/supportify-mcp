@@ -1,73 +1,47 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z } from "zod"
 
-import { fetchJSONData, renderFromJSON } from "./reference"
-import { searchAppleDeveloperDocs } from "./search"
-import { generateAppleDocUrl, normalizeDocumentationPath } from "./url"
-import { fetchHIGPageData, renderHIGFromJSON } from "./hig"
+import { fetchAndRenderSupportGuide } from "./support"
 
 export function createMcpServer() {
   const server = new McpServer({
-    name: "sosumi.ai",
+    name: "supportify",
     version: "1.0.0",
   })
 
-  // Register doc://{path} resource template (supports both dev docs and HIG)
+  // Register support://{guide}/{path} resource template
   server.registerResource(
-    "appleDocumentation",
-    new ResourceTemplate("doc://{path}", { list: undefined }),
+    "appleSupportGuide",
+    new ResourceTemplate("support://{guide}/{path}", { list: undefined }),
     {
-      title: "Apple Documentation",
-      description: "Apple Developer documentation and Human Interface Guidelines as Markdown",
+      title: "Apple Support Guides",
+      description: "Apple Platform Security and Deployment guides as Markdown",
     },
-    async (uri, { path }) => {
+    async (uri, { guide, path }) => {
       try {
-        // Percent decode the path first
+        // Percent decode the parameters
+        const decodedGuide = decodeURIComponent(guide.toString())
         const decodedPath = decodeURIComponent(path.toString())
 
-        // Check if this is a HIG path
-        if (decodedPath.includes("design/human-interface-guidelines")) {
-          // Handle HIG content
-          const higPath = decodedPath.replace(/^\/?(design\/human-interface-guidelines\/)/, "")
-          const sourceUrl = `https://developer.apple.com/design/human-interface-guidelines/${higPath}`
+        // Validate guide name
+        if (decodedGuide !== "security" && decodedGuide !== "deployment") {
+          throw new Error(`Invalid guide name: ${decodedGuide}. Must be "security" or "deployment"`)
+        }
 
-          const jsonData = await fetchHIGPageData(higPath)
-          const markdown = await renderHIGFromJSON(jsonData, sourceUrl)
+        const markdown = await fetchAndRenderSupportGuide(decodedGuide, decodedPath)
 
-          if (!markdown || markdown.trim().length < 100) {
-            throw new Error("Insufficient content in HIG page")
-          }
+        if (!markdown || markdown.trim().length < 100) {
+          throw new Error("Insufficient content in support guide page")
+        }
 
-          return {
-            contents: [
-              {
-                uri: uri.href,
-                text: markdown,
-                mimeType: "text/markdown",
-              },
-            ],
-          }
-        } else {
-          // Handle regular developer documentation
-          const normalizedPath = normalizeDocumentationPath(decodedPath)
-          const appleUrl = generateAppleDocUrl(normalizedPath)
-
-          const jsonData = await fetchJSONData(normalizedPath)
-          const markdown = await renderFromJSON(jsonData, appleUrl)
-
-          if (!markdown || markdown.trim().length < 100) {
-            throw new Error("Insufficient content in documentation")
-          }
-
-          return {
-            contents: [
-              {
-                uri: uri.href,
-                text: markdown,
-                mimeType: "text/markdown",
-              },
-            ],
-          }
+        return {
+          contents: [
+            {
+              uri: uri.href,
+              text: markdown,
+              mimeType: "text/markdown",
+            },
+          ],
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error"
@@ -84,121 +58,21 @@ export function createMcpServer() {
     },
   )
 
-  // Register Apple search tool
+  // Register fetch support guide tool
   server.registerTool(
-    "searchAppleDocumentation",
+    "fetchAppleSupportGuide",
     {
-      title: "Search Apple Documentation",
-      description: "Search Apple Developer documentation and return structured results",
-      inputSchema: {
-        query: z.string().describe("Search query for Apple documentation"),
-      },
-      outputSchema: {
-        query: z.string().describe("The search query that was executed"),
-        results: z
-          .array(
-            z.object({
-              title: z.string().describe("Title of the documentation page"),
-              url: z.string().describe("Full URL to the documentation page"),
-              description: z.string().describe("Brief description of the page content"),
-              breadcrumbs: z
-                .array(z.string())
-                .describe("Navigation breadcrumbs showing the page hierarchy"),
-              tags: z
-                .array(z.string())
-                .describe("Tags associated with the page (languages, platforms, etc.)"),
-              type: z.string().describe("Type of result (documentation, general, etc.)"),
-            }),
-          )
-          .describe("Array of search results"),
-      },
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: true,
-      },
-    },
-    async ({ query }) => {
-      try {
-        const searchResponse = await searchAppleDeveloperDocs(query)
-
-        const structuredContent = {
-          query: searchResponse.query,
-          results: searchResponse.results.map((result) => ({
-            title: result.title,
-            url: result.url,
-            description: result.description,
-            breadcrumbs: result.breadcrumbs,
-            tags: result.tags,
-            type: result.type,
-          })),
-        }
-
-        if (searchResponse.results.length === 0) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: `No results found for "${query}"`,
-              },
-            ],
-            structuredContent,
-          }
-        }
-
-        // Provide a readable text summary
-        const resultText =
-          `Found ${searchResponse.results.length} result(s) for "${query}":\n\n` +
-          searchResponse.results
-            .map(
-              (result, index) =>
-                `${index + 1}. ${result.title}\n   ${result.url}\n   ${result.description || "No description"}`,
-            )
-            .join("\n\n")
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: resultText,
-            },
-          ],
-          structuredContent,
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error"
-
-        const structuredContent = {
-          query,
-          results: [],
-        }
-
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: `Error searching Apple Developer documentation: ${errorMessage}`,
-            },
-          ],
-          structuredContent,
-        }
-      }
-    },
-  )
-
-  // Register documentation fetch tool (supports both dev docs and HIG)
-  server.registerTool(
-    "fetchAppleDocumentation",
-    {
-      title: "Fetch Apple Documentation",
+      title: "Fetch Apple Support Guide",
       description:
-        "Fetch Apple Developer documentation and Human Interface Guidelines by path and return as markdown",
+        "Fetch Apple Platform Security or Deployment guide by path and return as markdown",
       inputSchema: {
+        guide: z
+          .enum(["security", "deployment"])
+          .describe('Guide name: "security" or "deployment"'),
         path: z
           .string()
           .describe(
-            "Documentation path (e.g., '/documentation/swift', 'swiftui/view', 'design/human-interface-guidelines/foundations/color')",
+            "Page path/slug (e.g., 'welcome', 'intro-to-apple-platform-security-seccd5016d31')",
           ),
       },
       annotations: {
@@ -208,49 +82,21 @@ export function createMcpServer() {
         openWorldHint: true,
       },
     },
-    async ({ path }) => {
+    async ({ guide, path }) => {
       try {
-        // Check if this is a HIG path
-        if (path.includes("design/human-interface-guidelines")) {
-          // Handle HIG content
-          const higPath = path.replace(/^\/?(design\/human-interface-guidelines\/)/, "")
-          const sourceUrl = `https://developer.apple.com/design/human-interface-guidelines/${higPath}`
+        const markdown = await fetchAndRenderSupportGuide(guide, path)
 
-          const jsonData = await fetchHIGPageData(higPath)
-          const markdown = await renderHIGFromJSON(jsonData, sourceUrl)
+        if (!markdown || markdown.trim().length < 100) {
+          throw new Error("Insufficient content in support guide page")
+        }
 
-          if (!markdown || markdown.trim().length < 100) {
-            throw new Error("Insufficient content in HIG page")
-          }
-
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: markdown,
-              },
-            ],
-          }
-        } else {
-          // Handle regular developer documentation
-          const normalizedPath = normalizeDocumentationPath(path)
-          const appleUrl = generateAppleDocUrl(normalizedPath)
-
-          const jsonData = await fetchJSONData(normalizedPath)
-          const markdown = await renderFromJSON(jsonData, appleUrl)
-
-          if (!markdown || markdown.trim().length < 100) {
-            throw new Error("Insufficient content in documentation")
-          }
-
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: markdown,
-              },
-            ],
-          }
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
         }
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error"
@@ -259,7 +105,7 @@ export function createMcpServer() {
           content: [
             {
               type: "text" as const,
-              text: `Error fetching content for "${path}": ${errorMessage}`,
+              text: `Error fetching content for "${guide}/${path}": ${errorMessage}`,
             },
           ],
         }

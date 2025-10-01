@@ -1,76 +1,82 @@
-# sosumi.ai
+# Supportify MCP
 
-Making Apple docs AI-readable.
+Making Apple Support guides AI-readable.
 
-[sosumi.ai](https://sosumi.ai) 
-provides Apple Developer documentation in an AI-readable format 
-by converting JavaScript-rendered pages into Markdown.
+This MCP server provides access to Apple Platform Security and Deployment guides in an AI-readable Markdown format by parsing the HTML content from Apple Support pages.
+
+## Supported Guides
+
+- **[Apple Platform Security Guide](https://support.apple.com/guide/security/welcome/web)** - Comprehensive guide on Apple platform security
+- **[Apple Platform Deployment Guide](https://support.apple.com/guide/deployment/welcome/web)** - Guide for deploying Apple devices in enterprise environments
 
 ## Usage
 
 ### HTTP API
 
-Replace `developer.apple.com` with `sosumi.ai` 
-in any Apple Developer documentation URL:
+Access support guide pages using the following URL pattern:
 
-**Original:**
 ```
-https://developer.apple.com/documentation/swift/array
+/guide/{guide-name}/{page-path}
 ```
 
-**AI-readable:**
+**Examples:**
 ```
-https://sosumi.ai/documentation/swift/array
+/guide/security/welcome
+/guide/security/intro-to-apple-platform-security-seccd5016d31
+/guide/deployment/welcome
 ```
 
-This works for all API reference docs, 
-as well as Apple's [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) (HIG).
+The service returns the content as Markdown by default, or JSON if you include `Accept: application/json` in your request headers.
 
 ### MCP Integration
 
-Sosumi's MCP server supports Streamable HTTP and Server-Sent Events (SSE) transport. 
-If your client supports either of these, 
-configure it to connect directly to `https://sosumi.ai/mcp`.
+This service supports the Model Context Protocol (MCP) and can be integrated with AI assistants and other MCP clients.
 
-Otherwise,
-you can run this command to proxy over stdio:
+#### Configuration
+
+Add to your MCP client configuration:
 
 ```json
 {
   "mcpServers": {
-    "sosumi": {
+    "supportify": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://sosumi.ai/mcp"]
+      "args": ["-y", "mcp-remote", "http://localhost:8787/mcp"]
     }
   }
 }
 ```
 
-See [the website](https://sosumi.ai/#clients) for client-specific instructions.
+Or if deploying to a server:
+
+```json
+{
+  "mcpServers": {
+    "supportify": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://your-domain.com/mcp"]
+    }
+  }
+}
+```
 
 #### Available Resources
 
-- `doc://{path}` - Apple Developer documentation and Human Interface Guidelines in Markdown format
-  - Example: `doc://swift/array` returns Swift Array documentation
-  - Example: `doc://design/human-interface-guidelines/foundations/color` returns HIG Color guidelines
+- `support://{guide}/{path}` - Apple Support guide pages in Markdown format
+  - Example: `support://security/welcome` returns the Security Guide welcome page
+  - Example: `support://deployment/welcome` returns the Deployment Guide welcome page
 
 #### Available Tools
 
-- `searchAppleDocumentation` - Searches Apple Developer documentation
-  - Parameters: `query` (string)
-  - Returns structured results with titles, URLs, descriptions, breadcrumbs, and tags
-
-- `fetchAppleDocumentation` - Fetches Apple Developer documentation and Human Interface Guidelines by path
-  - Parameters: `path` (string) - Documentation path (e.g., '/documentation/swift', 'swiftui/view', 'design/human-interface-guidelines/foundations/color')
-  - Returns content as Markdown
+- `fetchAppleSupportGuide` - Fetches Apple Support guide pages by guide name and path
+  - Parameters:
+    - `guide` (enum): "security" or "deployment"
+    - `path` (string): Page path/slug (e.g., "welcome", "intro-to-apple-platform-security-seccd5016d31")
+  - Returns: Content as Markdown
 
 ## Self-Hosting
 
-This project is designed to be easily run on your own machine
-or deployed to a hosting provider.
-
-Sosumi.ai is currently hosted by 
-[Cloudflare Workers](https://workers.cloudflare.com).
+This project is designed to be easily run on your own machine or deployed to a hosting provider.
 
 ### Prerequisites
 
@@ -81,8 +87,8 @@ Sosumi.ai is currently hosted by
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/nshipster/sosumi.ai.git
-   cd sosumi.ai
+   git clone https://github.com/yourusername/supportify-mcp.git
+   cd supportify-mcp
    ```
 
 2. **Install dependencies:**
@@ -95,26 +101,35 @@ Sosumi.ai is currently hosted by
    npm run dev
    ```
 
-Once the application is up and running, press the <kbd>b</kbd>
-to open the URL in your browser.
+Once the application is up and running, press the <kbd>b</kbd> key to open the URL in your browser.
 
 To configure MCP clients to use your development server, 
-replace `sosumi.ai` with the local server address
-(`http://localhost:8787` by default).
+replace the server address with your local address (`http://localhost:8787` by default).
 
 > [!NOTE]  
-> The application is built with Hono, 
-> making it compatible with various runtimes.
+> The application is built with Hono, making it compatible with various runtimes.
 >
-> See the [Hono docs](https://hono.dev/docs/getting-started/basic)
-> for more information about deploying to different platforms.
+> See the [Hono docs](https://hono.dev/docs/getting-started/basic) for more information about deploying to different platforms.
+
+### Cloudflare Workers
+
+This project is optimized for deployment on Cloudflare Workers:
+
+```bash
+npm run deploy
+```
+
+Whenever you update your `wrangler.toml` or change your Worker bindings, be sure to re-run:
+
+```bash
+npm run cf-typegen
+```
 
 ## Development
 
 ### Testing
 
-This project uses [vitest](https://vitest.dev)
-for  unit and integration testing.
+This project uses [vitest](https://vitest.dev) for unit and integration testing.
 
 ```bash
 npm run test          # Run tests
@@ -124,8 +139,7 @@ npm run test:run      # Run tests once
 
 ### Code Quality
 
-This project uses [Biome](https://biomejs.dev/) 
-for code formatting, linting, and import organization.
+This project uses [Biome](https://biomejs.dev/) for code formatting, linting, and import organization.
 
 - `npm run format` - Format all code files
 - `npm run lint` - Lint and fix code issues
@@ -140,29 +154,17 @@ For the best development experience, install the Biome extension for your editor
 - [Vim/Neovim](https://github.com/biomejs/biome/tree/main/editors/vim)
 - [Emacs](https://github.com/biomejs/biome/tree/main/editors/emacs)
 
-### Cloudflare Workers
-
-Whenever you update your `wrangler.toml` or change your Worker bindings, 
-be sure to re-run:
-
-```bash
-npm run cf-typegen
-```
-
 ## License
 
-This project is available under the MIT license.
-See the LICENSE file for more info.
+This project is available under the MIT license. See the LICENSE file for more info.
 
 ## Legal
 
-This is an unofficial,
-independent project and is not affiliated with or endorsed by Apple Inc.
-"Apple", "Xcode", and related marks are trademarks of Apple Inc.
+This is an unofficial, independent project and is not affiliated with or endorsed by Apple Inc.
+"Apple" and related marks are trademarks of Apple Inc.
 
-This service is an accessibility-first,
-on‑demand renderer.
-It converts a single Apple Developer page to Markdown only when requested by a user.
+This service is an accessibility-first, on‑demand renderer.
+It converts Apple Support guide pages to Markdown only when requested by a user.
 It does not crawl, spider, or bulk download;
 it does not attempt to bypass authentication or security;
 and it implements rate limiting to avoid imposing unreasonable load.
@@ -175,5 +177,3 @@ Each page links back to the original source.
 Your use of this service must comply with Apple's Terms of Use and applicable law.
 You are solely responsible for how you access and use Apple's content through this tool.
 Do not use this service to circumvent technical measures or for redistribution.
-
-**Contact:** <info@sosumi.ai>
