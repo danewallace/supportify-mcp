@@ -252,6 +252,79 @@ def export_docx(markdown_file, output_file):
 
     doc.add_paragraph()  # Space after metadata
 
+    # Helper function to process inline formatting
+    def process_inline_formatting(text, paragraph):
+        """Process bold, italic, code, and links in text"""
+        # Pattern for markdown links [text](url)
+        link_pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
+        # Pattern for inline formatting
+        format_pattern = r'(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|' + link_pattern + r')'
+
+        parts = re.split(format_pattern, text)
+
+        for i, part in enumerate(parts):
+            if not part:
+                continue
+
+            # Check for links first
+            link_match = re.match(link_pattern, part)
+            if link_match:
+                link_text = link_match.group(1)
+                link_url = link_match.group(2)
+
+                # Skip local file paths
+                if link_url.startswith('/Users/') or link_url.startswith('file://'):
+                    # Just add the link text without the URL
+                    run = paragraph.add_run(link_text)
+                    run.font.color.rgb = RGBColor(0, 102, 204)
+                else:
+                    # Add as hyperlink
+                    add_hyperlink(paragraph, link_url, link_text)
+            # Bold text
+            elif part.startswith('**') and part.endswith('**') and len(part) > 4:
+                run = paragraph.add_run(part[2:-2])
+                run.bold = True
+            # Italic text
+            elif part.startswith('*') and part.endswith('*') and len(part) > 2 and not part.startswith('**'):
+                run = paragraph.add_run(part[1:-1])
+                run.italic = True
+            # Inline code
+            elif part.startswith('`') and part.endswith('`') and len(part) > 2:
+                run = paragraph.add_run(part[1:-1])
+                run.font.name = 'Courier New'
+                run.font.size = Pt(10)
+                run.font.color.rgb = RGBColor(80, 80, 80)
+            # Regular text
+            else:
+                paragraph.add_run(part)
+
+    def add_hyperlink(paragraph, url, text):
+        """Add a hyperlink to a paragraph"""
+        try:
+            # Get access to document.xml.rels for relationship
+            part = paragraph.part
+            r_id = part.relate_to(url, 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink', is_external=True)
+
+            # Create the hyperlink element
+            hyperlink = paragraph._element
+            new_run = hyperlink.add_r()
+            rPr = new_run._add_rPr()  # Use underscore version
+
+            # Set hyperlink style
+            rStyle = rPr._add_rStyle()
+            rStyle.set(qn('w:val'), 'Hyperlink')
+
+            # Add the text
+            new_run._add_t().text = text
+
+            # Add the relationship
+            new_run.set(qn('r:id'), r_id)
+        except Exception as e:
+            # Fallback: just add text as regular run
+            run = paragraph.add_run(text)
+            run.font.color.rgb = RGBColor(0, 102, 204)
+            run.underline = True
+
     # Process markdown content
     lines = body.split('\n')
     in_code_block = False
@@ -262,8 +335,11 @@ def export_docx(markdown_file, output_file):
         if line.startswith('```'):
             if in_code_block:
                 # End code block
-                code_para = doc.add_paragraph('\n'.join(code_block_content))
-                code_para.style = 'Intense Quote'
+                if code_block_content:
+                    code_para = doc.add_paragraph('\n'.join(code_block_content))
+                    code_para.style = 'Intense Quote'
+                    code_para_format = code_para.paragraph_format
+                    code_para_format.left_indent = Inches(0.5)
                 code_block_content = []
                 in_code_block = False
             else:
@@ -277,37 +353,39 @@ def export_docx(markdown_file, output_file):
 
         # Headers
         if line.startswith('### '):
-            doc.add_heading(line[4:], 3)
+            heading_text = line[4:].strip()
+            doc.add_heading(heading_text, 3)
         elif line.startswith('## '):
-            doc.add_heading(line[3:], 2)
+            heading_text = line[3:].strip()
+            doc.add_heading(heading_text, 2)
         elif line.startswith('# '):
-            doc.add_heading(line[2:], 1)
+            heading_text = line[2:].strip()
+            doc.add_heading(heading_text, 1)
         # Horizontal rule
         elif line.strip() == '---':
-            doc.add_paragraph('_' * 50)
+            hr_para = doc.add_paragraph()
+            hr_run = hr_para.add_run('_' * 80)
+            hr_run.font.color.rgb = RGBColor(200, 200, 200)
         # Lists
         elif line.strip().startswith('- ') or line.strip().startswith('* '):
-            doc.add_paragraph(line.strip()[2:], style='List Bullet')
+            list_text = line.strip()[2:]
+            para = doc.add_paragraph(style='List Bullet')
+            process_inline_formatting(list_text, para)
         elif re.match(r'^\d+\. ', line.strip()):
-            doc.add_paragraph(re.sub(r'^\d+\. ', '', line.strip()), style='List Number')
+            list_text = re.sub(r'^\d+\. ', '', line.strip())
+            para = doc.add_paragraph(style='List Number')
+            process_inline_formatting(list_text, para)
+        # Checkmarks
+        elif line.strip().startswith('✓ '):
+            para = doc.add_paragraph()
+            run = para.add_run('✓ ')
+            run.font.color.rgb = RGBColor(0, 153, 0)
+            run.bold = True
+            process_inline_formatting(line.strip()[2:], para)
         # Regular paragraphs
         elif line.strip():
             para = doc.add_paragraph()
-            # Handle bold and italic
-            parts = re.split(r'(\*\*.*?\*\*|\*.*?\*|`.*?`)', line)
-            for part in parts:
-                if part.startswith('**') and part.endswith('**'):
-                    run = para.add_run(part[2:-2])
-                    run.bold = True
-                elif part.startswith('*') and part.endswith('*'):
-                    run = para.add_run(part[1:-1])
-                    run.italic = True
-                elif part.startswith('`') and part.endswith('`'):
-                    run = para.add_run(part[1:-1])
-                    run.font.name = 'Courier New'
-                    run.font.color.rgb = RGBColor(60, 60, 60)
-                else:
-                    para.add_run(part)
+            process_inline_formatting(line, para)
 
     # Save document
     doc.save(output_file)
