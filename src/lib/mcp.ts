@@ -2,6 +2,7 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { z } from "zod"
 
 import { fetchAndRenderSupportGuide, fetchTableOfContents, searchToc } from "./support"
+import { fetchTrainingTutorial, getTrainingStructure, searchTrainingTutorials } from "./training"
 
 export function createMcpServer() {
   const server = new McpServer({
@@ -191,6 +192,247 @@ export function createMcpServer() {
             {
               type: "text" as const,
               text: `Error fetching content for "${guide}/${path}": ${errorMessage}\n\nTip: Use searchAppleSupportGuide first to find the correct page slug.`,
+            },
+          ],
+        }
+      }
+    },
+  )
+
+  // ============================================================================
+  // APPLE TRAINING TUTORIALS
+  // ============================================================================
+
+  // Register search training tool
+  server.registerTool(
+    "searchAppleTraining",
+    {
+      title: "Search Apple Device Support Training",
+      description:
+        "Search for training tutorials in Apple Device Support course (it-training.apple.com). Covers iPhone, iPad, and Mac troubleshooting, setup, networking, security, and diagnostics. Use this to find official Apple training content for help desk staff.",
+      inputSchema: {
+        query: z
+          .string()
+          .describe(
+            "Search query (e.g., 'backup iphone', 'wifi troubleshooting mac', 'mdm enrollment', 'filevault')",
+          ),
+        platform: z
+          .enum(["iphone", "ipad", "mac", "all"])
+          .optional()
+          .describe("Filter by platform (optional)"),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ query, platform }) => {
+      try {
+        const results = await searchTrainingTutorials(query, platform || "all")
+
+        if (results.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `No training tutorials found for "${query}"${platform && platform !== "all" ? ` on ${platform}` : ""}.`,
+              },
+            ],
+          }
+        }
+
+        // Format results as markdown
+        let markdown = `# Apple Training Results: "${query}"\n\n`
+        markdown += `Found ${results.length} tutorial${results.length === 1 ? "" : "s"}:\n\n`
+
+        for (const result of results.slice(0, 10)) {
+          markdown += `## ${result.title}\n`
+          markdown += `- **ID**: \`${result.tutorialId}\`\n`
+          markdown += `- **Type**: ${result.kind}\n`
+          if (result.estimatedTime) {
+            markdown += `- **Duration**: ${result.estimatedTime}\n`
+          }
+          if (result.volume) {
+            markdown += `- **Volume**: ${result.volume}\n`
+          }
+          if (result.chapter) {
+            markdown += `- **Chapter**: ${result.chapter}\n`
+          }
+          markdown += `- **URL**: ${result.url}\n`
+          markdown += `\n${result.abstract}\n\n`
+        }
+
+        if (results.length > 10) {
+          markdown += `\n*Showing top 10 of ${results.length} results*\n`
+        }
+
+        markdown += `\n---\n\n**Next step**: Use the \`fetchAppleTraining\` tool with the tutorial ID from the most relevant result above.\n`
+        markdown += `For example: \`fetchAppleTraining({ tutorialId: "${results[0].tutorialId}" })\`\n`
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error searching Apple training for "${query}": ${errorMessage}`,
+            },
+          ],
+        }
+      }
+    },
+  )
+
+  // Register fetch training tutorial tool
+  server.registerTool(
+    "fetchAppleTraining",
+    {
+      title: "Fetch Apple Training Tutorial",
+      description:
+        "Fetch a specific Apple Device Support training tutorial by ID. Returns tutorial metadata including title, abstract, estimated time, and URL. Use searchAppleTraining first to find the correct tutorial ID. IMPORTANT: When using this information, cite the source URL.",
+      inputSchema: {
+        tutorialId: z
+          .string()
+          .describe(
+            "Tutorial ID from search results (e.g., 'sup005', 'sup110', 'sup530'). Get this from searchAppleTraining first.",
+          ),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ tutorialId }) => {
+      try {
+        const tutorial = await fetchTrainingTutorial(tutorialId)
+
+        if (!tutorial) {
+          throw new Error(`Tutorial "${tutorialId}" not found`)
+        }
+
+        const abstractText = tutorial.abstract.map((item) => item.text).join(" ")
+        const tutorialUrl = `https://it-training.apple.com${tutorial.url}`
+
+        // Format tutorial as markdown
+        let markdown = `# ${tutorial.title}\n\n`
+
+        if (tutorial.estimatedTime) {
+          markdown += `**Estimated Time**: ${tutorial.estimatedTime}\n\n`
+        }
+
+        markdown += `**Type**: ${tutorial.kind}\n\n`
+        markdown += `**URL**: ${tutorialUrl}\n\n`
+        markdown += `## Overview\n\n${abstractText}\n\n`
+
+        markdown += `---\n\n`
+        markdown += `**Note**: This is a training tutorial from Apple's Device Support course. `
+        markdown += `The full interactive tutorial with step-by-step guidance is available at: ${tutorialUrl}\n\n`
+        markdown += `**⚠️ IMPORTANT**: When using this information to answer questions, cite this source URL in your response: ${tutorialUrl}`
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error fetching training tutorial "${tutorialId}": ${errorMessage}\n\nTip: Use searchAppleTraining first to find the correct tutorial ID.`,
+            },
+          ],
+        }
+      }
+    },
+  )
+
+  // Register list training catalog tool
+  server.registerTool(
+    "listAppleTrainingCatalog",
+    {
+      title: "List Apple Training Course Structure",
+      description:
+        "Get the complete structure of the Apple Device Support training course, including all volumes, chapters, and tutorials. Useful for understanding the full curriculum and finding tutorials by topic area.",
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async () => {
+      try {
+        const structure = await getTrainingStructure()
+
+        // Format catalog as markdown
+        let markdown = `# ${structure.title}\n\n`
+
+        if (structure.estimatedTime) {
+          markdown += `**Total Duration**: ${structure.estimatedTime}\n\n`
+        }
+
+        markdown += `## Course Structure\n\n`
+
+        for (const volume of structure.volumes) {
+          markdown += `### ${volume.name}\n\n`
+
+          for (const chapter of volume.chapters) {
+            markdown += `#### ${chapter.name}\n\n`
+
+            if (chapter.tutorials.length > 0) {
+              for (const tutorial of chapter.tutorials) {
+                markdown += `- **${tutorial.title}** (\`${tutorial.id}\`)`
+                if (tutorial.estimatedTime) {
+                  markdown += ` - ${tutorial.estimatedTime}`
+                }
+                markdown += `\n`
+              }
+              markdown += `\n`
+            }
+          }
+        }
+
+        markdown += `---\n\n`
+        markdown += `**Next steps**:\n`
+        markdown += `- Use \`searchAppleTraining\` to find tutorials by topic\n`
+        markdown += `- Use \`fetchAppleTraining\` with a tutorial ID to get details\n`
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error fetching training catalog: ${errorMessage}`,
             },
           ],
         }

@@ -7,11 +7,12 @@ import { trimTrailingSlash } from "hono/trailing-slash"
 
 import { NotFoundError } from "./lib/fetch"
 import { createMcpServer } from "./lib/mcp"
+import { fetchAndRenderSupportGuide, fetchTableOfContents, searchToc } from "./lib/support"
 import {
-  fetchAndRenderSupportGuide,
-  fetchTableOfContents,
-  searchToc,
-} from "./lib/support"
+  fetchTrainingTutorial,
+  getTrainingStructure,
+  searchTrainingTutorials,
+} from "./lib/training"
 
 interface Env {
   ASSETS: Fetcher
@@ -195,40 +196,145 @@ This service works with Apple Platform guides:
   }
 })
 
+// ============================================================================
+// APPLE TRAINING ROUTES
+// ============================================================================
+
+// Training catalog route: /training/catalog
+app.get("/training/catalog", async (c) => {
+  try {
+    const structure = await getTrainingStructure()
+    return c.json({
+      title: structure.title,
+      estimatedTime: structure.estimatedTime,
+      totalVolumes: structure.volumes.length,
+      volumes: structure.volumes,
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return c.json({ error: `Failed to fetch training catalog: ${errorMessage}` }, 500)
+  }
+})
+
+// Training search route: /training/search?q={query}&platform={platform}
+app.get("/training/search", async (c) => {
+  const query = c.req.query("q")
+  const platform = c.req.query("platform") as "iphone" | "ipad" | "mac" | "all" | undefined
+
+  if (!query || query.trim().length === 0) {
+    return c.json({ error: "Query parameter 'q' is required" }, 400)
+  }
+
+  try {
+    const results = await searchTrainingTutorials(query, platform || "all")
+
+    return c.json({
+      query,
+      platform: platform || "all",
+      totalResults: results.length,
+      results: results.map((item) => ({
+        tutorialId: item.tutorialId,
+        title: item.title,
+        abstract: item.abstract,
+        estimatedTime: item.estimatedTime,
+        url: item.url,
+        kind: item.kind,
+        volume: item.volume,
+        chapter: item.chapter,
+      })),
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return c.json({ error: `Search failed: ${errorMessage}` }, 500)
+  }
+})
+
+// Training tutorial route: /training/{tutorialId}
+app.get("/training/:tutorialId", async (c) => {
+  const tutorialId = c.req.param("tutorialId")
+
+  try {
+    const tutorial = await fetchTrainingTutorial(tutorialId)
+
+    if (!tutorial) {
+      return c.json({ error: `Tutorial "${tutorialId}" not found` }, 404)
+    }
+
+    const abstractText = tutorial.abstract.map((item) => item.text).join(" ")
+    const tutorialUrl = `https://it-training.apple.com${tutorial.url}`
+
+    return c.json({
+      tutorialId,
+      title: tutorial.title,
+      abstract: abstractText,
+      estimatedTime: tutorial.estimatedTime,
+      kind: tutorial.kind,
+      url: tutorialUrl,
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+    return c.json({ error: `Failed to fetch tutorial: ${errorMessage}` }, 500)
+  }
+})
+
 // Root route with information
 app.get("/", (c) => {
   return c.text(
     `# Supportify
 
-Making Apple Support guides AI-readable.
+Making Apple Support guides and training tutorials AI-readable.
 
-## Supported Guides
+## Supported Content
 
+### Apple Platform Guides
 - **Security** - Apple Platform Security Guide
 - **Deployment** - Apple Platform Deployment Guide
+
+### Apple Device Support Training
+- **Training Course** - Complete training curriculum for Mac, iPhone, and iPad support
 
 ## Usage
 
 ### HTTP API
 
-Access support guide pages using:
-
+**Support Guides:**
 \`\`\`
 /guide/{guide-name}/{page-path}
+/guide/{guide-name}/toc
+/guide/{guide-name}/search?q={query}
+\`\`\`
+
+**Training Tutorials:**
+\`\`\`
+/training/catalog
+/training/search?q={query}&platform={iphone|ipad|mac|all}
+/training/{tutorialId}
 \`\`\`
 
 ### Examples
 
+**Support Guides:**
 - [Security Guide - Welcome](/guide/security/welcome)
-- [Security Guide - Intro](/guide/security/intro-to-apple-platform-security-seccd5016d31)
-- [Deployment Guide - Welcome](/guide/deployment/welcome)
+- [Search Security Guide](/guide/security/search?q=encryption)
+
+**Training:**
+- [Training Catalog](/training/catalog)
+- [Search Training](/training/search?q=backup)
+- [Specific Tutorial](/training/sup005)
 
 ### MCP Integration
 
 Connect to \`/mcp\` endpoint for Model Context Protocol support.
 
+**Available MCP Tools:**
+- \`searchAppleSupportGuide\` - Search security/deployment guides
+- \`fetchAppleSupportGuide\` - Fetch guide content as markdown
+- \`searchAppleTraining\` - Search training tutorials
+- \`fetchAppleTraining\` - Fetch training tutorial details
+- \`listAppleTrainingCatalog\` - Get complete course structure
+
 ---
-*Making Apple Support guides AI-readable*`,
+*Making Apple Support guides and training tutorials AI-readable*`,
     200,
     { "Content-Type": "text/markdown; charset=utf-8" },
   )
