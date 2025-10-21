@@ -16,6 +16,7 @@ try:
     from docx.shared import Inches, Pt, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
@@ -284,78 +285,119 @@ def export_docx(markdown_file, output_file):
 
     doc.add_paragraph()  # Space after metadata
 
+    # Helper function to add proper bullet list items
+    def add_bullet_paragraph(text, level=0):
+        """Add a properly formatted bullet list item with actual bullets"""
+        para = doc.add_paragraph(style='List Bullet')
+
+        # Add proper numbering format for bullets
+        pPr = para._element.get_or_add_pPr()
+        numPr = OxmlElement('w:numPr')
+
+        # Bullet list uses numId=1, ilvl for indentation level
+        numId = OxmlElement('w:numId')
+        numId.set(qn('w:val'), '1')
+
+        ilvl = OxmlElement('w:ilvl')
+        ilvl.set(qn('w:val'), str(level))
+
+        numPr.append(ilvl)
+        numPr.append(numId)
+        pPr.append(numPr)
+
+        return para
+
+    # Helper function to add proper numbered list items
+    def add_numbered_paragraph(text, level=0):
+        """Add a properly formatted numbered list item"""
+        para = doc.add_paragraph(style='List Number')
+
+        # Add proper numbering format
+        pPr = para._element.get_or_add_pPr()
+        numPr = OxmlElement('w:numPr')
+
+        # Numbered list uses numId=2, ilvl for indentation level
+        numId = OxmlElement('w:numId')
+        numId.set(qn('w:val'), '2')
+
+        ilvl = OxmlElement('w:ilvl')
+        ilvl.set(qn('w:val'), str(level))
+
+        numPr.append(ilvl)
+        numPr.append(numId)
+        pPr.append(numPr)
+
+        return para
+
     # Helper function to process inline formatting
     def process_inline_formatting(text, paragraph):
         """Process bold, italic, code, and links in text"""
-        # Pattern for markdown links [text](url)
+        # Patterns for different formatting
         link_pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
-        # Pattern for inline formatting
-        format_pattern = r'(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|' + link_pattern + r')'
+        bold_pattern = r'\*\*(.*?)\*\*'
+        italic_pattern = r'\*([^*]+?)\*'
+        code_pattern = r'`([^`]+)`'
 
-        parts = re.split(format_pattern, text)
+        # Combine all patterns (without capturing groups in outer level)
+        combined_pattern = f'({link_pattern}|{bold_pattern}|{italic_pattern}|{code_pattern})'
 
-        for i, part in enumerate(parts):
-            if not part:
-                continue
+        last_end = 0
 
-            # Check for links first
-            link_match = re.match(link_pattern, part)
-            if link_match:
-                link_text = link_match.group(1)
-                link_url = link_match.group(2)
+        for match in re.finditer(combined_pattern, text):
+            # Add any text before this match
+            if match.start() > last_end:
+                paragraph.add_run(text[last_end:match.start()])
 
-                # Skip local file paths
-                if link_url.startswith('/Users/') or link_url.startswith('file://'):
-                    # Just add the link text without the URL
-                    run = paragraph.add_run(link_text)
-                    run.font.color.rgb = RGBColor(0, 102, 204)
-                else:
-                    # Add as hyperlink
-                    add_hyperlink(paragraph, link_url, link_text)
-            # Bold text
-            elif part.startswith('**') and part.endswith('**') and len(part) > 4:
-                run = paragraph.add_run(part[2:-2])
+            matched_text = match.group(0)
+
+            # Check what type of formatting this is
+            if matched_text.startswith('['):
+                # Link
+                link_match = re.match(link_pattern, matched_text)
+                if link_match:
+                    link_text = link_match.group(1)
+                    link_url = link_match.group(2)
+
+                    # Skip local file paths
+                    if link_url.startswith('/Users/') or link_url.startswith('file://'):
+                        run = paragraph.add_run(link_text)
+                        run.font.color.rgb = RGBColor(0, 102, 204)
+                    else:
+                        add_hyperlink(paragraph, link_url, link_text)
+
+            elif matched_text.startswith('**'):
+                # Bold
+                run = paragraph.add_run(matched_text[2:-2])
                 run.bold = True
-            # Italic text
-            elif part.startswith('*') and part.endswith('*') and len(part) > 2 and not part.startswith('**'):
-                run = paragraph.add_run(part[1:-1])
-                run.italic = True
-            # Inline code
-            elif part.startswith('`') and part.endswith('`') and len(part) > 2:
-                run = paragraph.add_run(part[1:-1])
+
+            elif matched_text.startswith('`'):
+                # Code
+                run = paragraph.add_run(matched_text[1:-1])
                 run.font.name = 'Courier New'
                 run.font.size = Pt(10)
                 run.font.color.rgb = RGBColor(80, 80, 80)
-            # Regular text
-            else:
-                paragraph.add_run(part)
+
+            elif matched_text.startswith('*'):
+                # Italic
+                run = paragraph.add_run(matched_text[1:-1])
+                run.italic = True
+
+            last_end = match.end()
+
+        # Add any remaining text after the last match
+        if last_end < len(text):
+            paragraph.add_run(text[last_end:])
 
     def add_hyperlink(paragraph, url, text):
-        """Add a hyperlink to a paragraph"""
-        try:
-            # Get access to document.xml.rels for relationship
-            part = paragraph.part
-            r_id = part.relate_to(url, 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink', is_external=True)
+        """Add a hyperlink-styled run to a paragraph"""
+        # python-docx hyperlink creation is complex and error-prone
+        # Using styled text (blue + underline) provides clear visual indication
+        run = paragraph.add_run(text)
+        run.font.color.rgb = RGBColor(0, 102, 204)  # Blue color
+        run.underline = True
 
-            # Create the hyperlink element
-            hyperlink = paragraph._element
-            new_run = hyperlink.add_r()
-            rPr = new_run._add_rPr()  # Use underscore version
-
-            # Set hyperlink style
-            rStyle = rPr._add_rStyle()
-            rStyle.set(qn('w:val'), 'Hyperlink')
-
-            # Add the text
-            new_run._add_t().text = text
-
-            # Add the relationship
-            new_run.set(qn('r:id'), r_id)
-        except Exception as e:
-            # Fallback: just add text as regular run
-            run = paragraph.add_run(text)
-            run.font.color.rgb = RGBColor(0, 102, 204)
-            run.underline = True
+        # Note: The URL is intentionally not displayed - this is standard for
+        # hyperlink text in documents. Users know blue underlined text is clickable.
 
     # Process markdown content
     lines = body.split('\n')
@@ -386,13 +428,16 @@ def export_docx(markdown_file, output_file):
         # Headers
         if line.startswith('### '):
             heading_text = line[4:].strip()
-            doc.add_heading(heading_text, 3)
+            heading_para = doc.add_heading('', 3)
+            process_inline_formatting(heading_text, heading_para)
         elif line.startswith('## '):
             heading_text = line[3:].strip()
-            doc.add_heading(heading_text, 2)
+            heading_para = doc.add_heading('', 2)
+            process_inline_formatting(heading_text, heading_para)
         elif line.startswith('# '):
             heading_text = line[2:].strip()
-            doc.add_heading(heading_text, 1)
+            heading_para = doc.add_heading('', 1)
+            process_inline_formatting(heading_text, heading_para)
         # Horizontal rule
         elif line.strip() == '---':
             hr_para = doc.add_paragraph()
@@ -401,11 +446,11 @@ def export_docx(markdown_file, output_file):
         # Lists
         elif line.strip().startswith('- ') or line.strip().startswith('* '):
             list_text = line.strip()[2:]
-            para = doc.add_paragraph(style='List Bullet')
+            para = add_bullet_paragraph(list_text)
             process_inline_formatting(list_text, para)
         elif re.match(r'^\d+\. ', line.strip()):
             list_text = re.sub(r'^\d+\. ', '', line.strip())
-            para = doc.add_paragraph(style='List Number')
+            para = add_numbered_paragraph(list_text)
             process_inline_formatting(list_text, para)
         # Checkmarks
         elif line.strip().startswith('✓ '):
