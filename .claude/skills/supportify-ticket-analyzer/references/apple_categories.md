@@ -251,45 +251,263 @@ This reference document defines which support issues can be addressed using Appl
 
 ---
 
-## Issues NOT Addressable by Apple Documentation
+### 11. MDM & Device Management
 
-These issues require enterprise IT, vendor-specific, or third-party support:
+**Description:** Mobile Device Management, enrollment, and enterprise device configuration
 
-### Enterprise MDM (JAMF, Intune, etc.)
-- Device enrollment and provisioning
-- MDM profile installation
-- Remote management
-- Compliance policies
+**Keywords:**
+- MDM, mobile device management
+- Apple Business Manager, ABM
+- Apple School Manager, ASM
+- Device enrollment, DEP, ADE
+- Configuration profile, profile installation
+- Remote management, device management
 
-### Device Lifecycle Management
-- Device decommissioning
-- Activation lock removal (enterprise)
-- Asset tracking and inventory
-- Device transfers
+**Apple Resources:**
+- Apple Business Manager User Guide
+- Apple School Manager documentation
+- MDM and Apple Business Manager: https://support.apple.com/guide/deployment/
+- Device Enrollment Program documentation
+- Configuration Profile Reference
+- Platform Deployment guides
 
-### Third-Party Applications
-- Application deployment (non-Apple apps)
-- Software licensing
-- Custom enterprise applications
-- Application updates (third-party)
+**Common Issues:**
+- MDM enrollment problems
+- Profile installation failures
+- Apple Business Manager setup
+- Device assignment and management
+- Configuration profile conflicts
 
-### Enterprise Authentication
-- Active Directory integration
-- Kerberos configuration
-- LDAP setup
-- SSO (Single Sign-On) configuration
+**Note:** While vendor-specific MDM platforms (JAMF, Intune, Kandji) have their own documentation, Apple provides extensive guidance on MDM protocols, enrollment, and device management fundamentals.
 
-### Enterprise Network Infrastructure
-- Corporate VPN (vendor-specific)
-- Proxy server configuration
-- Network access control (NAC)
-- Enterprise Wi-Fi (802.1X with certificates)
+---
 
-### Group Policy & Permissions
-- File share access
-- Group memberships
-- Enterprise permissions
-- Resource access
+### 12. Application Deployment & Management
+
+**Description:** Installing, updating, and managing applications on macOS
+
+**Keywords:**
+- App deployment, application installation
+- App update, software update
+- Package installation, .pkg, .dmg
+- App Store deployment
+- Managed apps
+- Application preferences
+- Uninstall, remove application
+
+**Apple Resources:**
+- Deploying apps: https://support.apple.com/guide/deployment/
+- Mac App Store for Business
+- Package creation and deployment
+- Application preferences management
+- Installer Package formats
+
+**Common Issues:**
+- App won't install
+- Application update failures
+- Package deployment issues
+- App Store authentication problems
+- Preference management
+
+**Note:** Third-party app-specific issues still require vendor support, but the installation, deployment mechanisms, and macOS application architecture are documented by Apple.
+
+---
+
+### 13. Enterprise Authentication & Directory Services
+
+**Description:** Active Directory, Kerberos, LDAP, and enterprise authentication
+
+**Keywords:**
+- Active Directory, AD, domain
+- Kerberos, SSO, single sign-on
+- LDAP, directory services
+- Enterprise authentication
+- Network account, domain account
+- Certificate authentication
+
+**Apple Resources:**
+- Integrating macOS with Active Directory: https://support.apple.com/guide/deployment/
+- Kerberos authentication on Mac
+- Network account configuration
+- Certificate-based authentication
+- Directory Services on macOS
+
+**Common Issues:**
+- Can't join domain
+- Kerberos ticket problems
+- LDAP authentication failures
+- Certificate authentication issues
+- Network account login problems
+
+**Note:** Apple provides comprehensive documentation for integrating macOS with enterprise directory services.
+
+---
+
+### 14. Enterprise Network Configuration
+
+**Description:** Corporate network infrastructure, proxy, certificates, and enterprise Wi-Fi
+
+**Keywords:**
+- Corporate network, enterprise network
+- Proxy server, proxy configuration
+- 802.1X, network authentication
+- Certificate installation, enterprise certificate
+- Network access control, NAC
+- Corporate VPN, enterprise VPN
+
+**Apple Resources:**
+- Network configuration: https://support.apple.com/guide/deployment/
+- 802.1X configuration profiles
+- Certificate management
+- Proxy settings and PAC files
+- VPN configuration (L2TP, IKEv2, IPsec)
+- Network extension framework
+
+**Common Issues:**
+- Proxy configuration problems
+- 802.1X Wi-Fi authentication
+- Certificate installation issues
+- Enterprise VPN setup
+- Network access control problems
+
+**Note:** While specific vendor VPN clients may need vendor support, Apple's built-in VPN capabilities and network configuration are well-documented.
+
+---
+
+### 15. File Sharing & Network Access
+
+**Description:** SMB file shares, AFP, network drives, and permissions
+
+**Keywords:**
+- File share, network share
+- SMB, CIFS, AFP
+- Connect to server
+- Network drive, mounted volume
+- File permissions, folder access
+- Group membership
+
+**Apple Resources:**
+- File Sharing on Mac: https://support.apple.com/guide/mac-help/
+- SMB file sharing configuration
+- Network file system access
+- Permission troubleshooting
+- Server connection management
+
+**Common Issues:**
+- Can't connect to file share
+- Permission denied errors
+- Network drive mounting problems
+- File sharing authentication
+- Group access issues
+
+**Note:** General file sharing and macOS permission systems are documented by Apple, though enterprise-specific permission policies may need IT support.
+
+---
+
+### 16. Software Updates & Patch Management
+
+**Description:** System and application updates, update policies, and management
+
+**Keywords:**
+- Software update, system update
+- macOS update policy
+- Managed software update
+- Update catalog, update server
+- Deferred updates, delayed updates
+
+**Apple Resources:**
+- Managing software updates: https://support.apple.com/guide/deployment/
+- Software Update service
+- Update scheduling and deferral
+- macOS update catalog
+- Update troubleshooting
+
+**Common Issues:**
+- Updates not appearing
+- Update policy conflicts
+- Deferred update problems
+- Software Update service issues
+
+---
+
+### 17. Device Lifecycle & Provisioning
+
+**Description:** Device setup, imaging, migration, and decommissioning
+
+**Keywords:**
+- Device setup, Mac setup
+- Migration Assistant, data migration
+- Setup Assistant
+- Erase Mac, factory reset
+- Activation Lock
+- Device transfer, ownership transfer
+
+**Apple Resources:**
+- Mac setup and migration: https://support.apple.com/guide/mac-help/
+- Migration Assistant documentation
+- Erase and reinstall macOS
+- Activation Lock management: https://support.apple.com/HT201441
+- Setup Assistant customization
+- Apple Configurator for Mac
+
+**Common Issues:**
+- Migration problems
+- Activation Lock removal
+- Setup Assistant issues
+- Erase and reinstall failures
+- Device transfer problems
+
+**Note:** Enterprise Activation Lock removal requires Apple Business Manager, which is documented by Apple.
+
+---
+
+## Issues with LIMITED Apple Documentation
+
+These issues require vendor-specific support and have limited or no Apple documentation:
+
+### Vendor-Specific MDM Platforms
+- **JAMF Pro**: JAMF-specific policies, smart groups, scripts, workflows
+- **Microsoft Intune**: Intune-specific configuration, compliance rules, app deployment
+- **Kandji, Mosyle, Addigy**: Platform-specific features and troubleshooting
+- **Custom MDM solutions**: Proprietary implementations and workflows
+
+**Note:** General MDM concepts and Apple's MDM protocol ARE documented by Apple (see Category 11).
+
+---
+
+### Third-Party Application Issues
+- **Vendor-specific bugs**: Application crashes, errors within third-party software
+- **Software licensing**: License activation, subscription management for non-Apple software
+- **Custom enterprise applications**: In-house developed software
+- **Plugin/extension issues**: Third-party Safari extensions, system extensions from vendors
+
+**Note:** General app installation, permissions, and deployment mechanisms ARE documented by Apple (see Category 12).
+
+---
+
+### Vendor-Specific VPN Clients
+- **Cisco AnyConnect**: Client-specific configuration and troubleshooting
+- **Palo Alto GlobalProtect**: Platform-specific issues
+- **Zscaler, Cloudflare WARP**: Vendor client problems
+- **Custom VPN solutions**: Proprietary implementations
+
+**Note:** Built-in macOS VPN (L2TP, IKEv2, IPsec) IS documented by Apple (see Categories 5 and 14).
+
+---
+
+### Enterprise Asset Management
+- **Inventory systems**: Asset tracking software, inventory databases
+- **Service desk platforms**: ServiceNow, Jira Service Management configuration
+- **Procurement processes**: Device ordering, provisioning workflows
+- **Compliance reporting**: Vendor-specific compliance tools and dashboards
+
+---
+
+### Organization-Specific Policies
+- **Custom security policies**: Organization-defined security requirements
+- **Compliance frameworks**: Industry-specific compliance (HIPAA, SOC2, etc.)
+- **Access control policies**: Company-specific permission schemes
+- **Data retention policies**: Organization-defined data management
 
 ---
 
@@ -298,18 +516,35 @@ These issues require enterprise IT, vendor-specific, or third-party support:
 When analyzing support tickets:
 
 1. **Extract keywords** from ticket descriptions
-2. **Match to Apple-addressable categories** using the keywords above
-3. **Verify context** - even Apple-related issues may need enterprise IT if:
-   - They're part of a deployment process
-   - They require MDM intervention
-   - They involve enterprise infrastructure
-4. **Flag uncertain cases** for manual review
-5. **Link to Apple resources** when categorizing as Apple-addressable
+2. **Match to Apple-addressable categories** (Categories 1-17) using the keywords above
+3. **Be inclusive** - Prioritize Apple documentation when available, even for enterprise scenarios
+4. **Check for vendor-specific context** - Only categorize as "limited documentation" if:
+   - The issue is specific to a vendor's implementation (e.g., "JAMF policy not applying")
+   - The problem is with a third-party product itself (e.g., "Slack won't launch")
+   - It requires access to organization-specific systems or policies
+5. **Flag uncertain cases** for manual review
+6. **Link to Apple resources** when categorizing as Apple-addressable
+
+## Categorization Philosophy
+
+**Inclusive Approach (Phase 1):**
+- When in doubt, categorize as Apple-addressable if Apple documentation exists
+- Recognize that Apple provides extensive enterprise and deployment documentation
+- MDM, authentication, networking, and app deployment are documented by Apple
+- Only exclude truly vendor-specific implementations
+
+**Examples:**
+- "MDM enrollment failing" → **Apple-addressable** (Category 11: MDM & Device Management)
+- "JAMF policy not deploying" → **Limited documentation** (requires JAMF-specific knowledge)
+- "Can't connect to file share" → **Apple-addressable** (Category 15: File Sharing)
+- "Slack app crashing" → **Limited documentation** (third-party app issue)
+- "VPN won't connect" → **Apple-addressable** if using built-in VPN (Category 14)
+- "Cisco AnyConnect issues" → **Limited documentation** (vendor-specific client)
 
 ## Confidence Levels
 
-- **High Confidence:** Clear keyword matches, standard consumer scenarios
-- **Medium Confidence:** Some keyword matches but context unclear
+- **High Confidence:** Clear keyword matches with Apple documentation available
+- **Medium Confidence:** Some keyword matches but context may be vendor-specific
 - **Low Confidence:** Ambiguous description, may need human review
 
 ## Integration with Supportify MCP

@@ -11,27 +11,47 @@ from pathlib import Path
 from collections import Counter
 import re
 
-# Keywords for Apple-addressable issues
+# Keywords for Apple-addressable issues (inclusive approach for Phase 1)
 APPLE_ADDRESSABLE_KEYWORDS = {
-    'macos_update': ['macos update', 'os update', 'system update', 'os upgrade', 'macos upgrade', 'sequoia', 'sonoma', 'ventura'],
-    'login_issue': ['login issue', 'login problem', 'password', 'authentication', 'filevault', 'keychain', 'icloud login'],
-    'hardware_issue': ['hardware', 'battery', 'display', 'keyboard', 'trackpad', 'ssd', 'storage', 'memory', 'thermal', 'overheating'],
-    'wifi_network': ['wifi', 'wireless', 'network connection', 'internet connection', 'wi-fi', 'airport'],
-    'vpn_issue': ['vpn', 'virtual private network'],
-    'performance': ['slow', 'performance', 'freeze', 'hang', 'crash', 'system data', 'storage full'],
-    'native_apps': ['mail app', 'safari', 'messages', 'facetime', 'calendar app', 'notes app', 'reminders'],
-    'bluetooth': ['bluetooth', 'airdrop', 'handoff', 'continuity'],
-    'printer': ['print', 'printer', 'airprint'],
-    'permissions': ['permissions', 'security & privacy', 'system preferences', 'system settings']
+    # Original consumer-focused categories (1-10)
+    'macos_update': ['macos update', 'os update', 'system update', 'os upgrade', 'macos upgrade', 'sequoia', 'sonoma', 'ventura', 'monterey', 'big sur'],
+    'login_issue': ['login issue', 'login problem', 'password reset', 'forgot password', 'filevault', 'keychain', 'icloud login', 'user password'],
+    'hardware_issue': ['hardware', 'battery', 'display', 'keyboard', 'trackpad', 'ssd', 'storage', 'memory', 'thermal', 'overheating', 'fan noise'],
+    'wifi_network': ['wifi', 'wireless', 'network connection', 'internet connection', 'wi-fi', 'airport', 'network settings'],
+    'vpn_issue': ['vpn connection', 'vpn setup', 'l2tp', 'ikev2', 'ipsec'],
+    'performance': ['slow', 'performance', 'freeze', 'hang', 'crash', 'system data', 'storage full', 'lag', 'unresponsive'],
+    'native_apps': ['mail app', 'safari', 'messages', 'facetime', 'calendar app', 'notes app', 'reminders', 'photos app', 'music app'],
+    'bluetooth': ['bluetooth', 'airdrop', 'handoff', 'continuity', 'universal control', 'sidecar'],
+    'printer': ['print', 'printer', 'airprint', 'print queue'],
+    'permissions': ['permissions', 'security & privacy', 'system preferences', 'system settings', 'gatekeeper', 'xprotect'],
+
+    # New enterprise-friendly categories (11-17)
+    'mdm_management': ['mdm enrollment', 'device enrollment', 'dep enrollment', 'ade enrollment', 'apple business manager', 'apple school manager',
+                       'abm', 'asm', 'configuration profile', 'device management', 'mobile device management'],
+    'app_deployment': ['app deployment', 'application installation', 'app install', 'package installation', '.pkg', '.dmg',
+                       'app store deployment', 'managed app', 'app won\'t install', 'software install'],
+    'enterprise_auth': ['active directory', 'domain join', 'kerberos', 'ldap', 'directory services', 'network account',
+                        'certificate authentication', 'enterprise authentication'],
+    'enterprise_network': ['proxy configuration', '802.1x', 'network authentication', 'certificate installation',
+                           'enterprise certificate', 'network access control', 'nac', 'corporate network'],
+    'file_sharing': ['file share', 'network share', 'smb', 'afp', 'connect to server', 'network drive',
+                     'mounted volume', 'file permissions', 'folder access'],
+    'software_update_mgmt': ['software update policy', 'managed update', 'update catalog', 'deferred update', 'delayed update'],
+    'device_lifecycle': ['migration assistant', 'setup assistant', 'erase mac', 'factory reset', 'activation lock',
+                        'device transfer', 'mac setup', 'data migration']
 }
 
-# Keywords for non-Apple (enterprise IT) issues
-ENTERPRISE_IT_KEYWORDS = {
-    'jamf': ['jamf', 'mdm', 'enrollment', 'provisioning', 'remote management', 'profile'],
-    'decommission': ['decommission', 'wipe', 'activation lock', 'remove device'],
-    'third_party_apps': ['lucidlink', 'chester', 'slack deployment', 'chrome', 'zoom', 'application update'],
-    'enterprise_auth': ['active directory', 'ad', 'domain', 'kerberos', 'corporate credentials'],
-    'enterprise_network': ['corp wifi', 'corporate vpn', 'proxy']
+# Keywords for vendor-specific issues with LIMITED Apple documentation
+# These are more specific to identify true vendor-specific problems
+VENDOR_SPECIFIC_KEYWORDS = {
+    'jamf_specific': ['jamf pro', 'jamf policy', 'jamf smart group', 'jamf script', 'jamf self service'],
+    'intune_specific': ['intune', 'microsoft endpoint', 'company portal'],
+    'other_mdm_vendors': ['kandji', 'mosyle', 'addigy', 'workspace one'],
+    'third_party_app_issues': ['slack crash', 'chrome crash', 'zoom crash', 'lucidlink error', 'chester error',
+                               'app crash', 'application error', 'software license'],
+    'vendor_vpn_clients': ['cisco anyconnect', 'globalprotect', 'zscaler', 'cloudflare warp', 'vpn client'],
+    'asset_management': ['asset tracking', 'inventory system', 'servicenow', 'jira service'],
+    'org_specific': ['compliance reporting', 'hipaa', 'sox', 'custom policy']
 }
 
 def detect_file_structure(file_path):
@@ -88,6 +108,10 @@ def categorize_issue(description, short_desc, classification, issue_type):
     """
     Categorize if an issue can be addressed by Apple documentation
     Returns: (is_apple_addressable, category, confidence)
+
+    Phase 1 Inclusive Approach:
+    - Prioritize Apple-addressable categorization when Apple docs exist
+    - Only mark as vendor-specific if clearly a vendor implementation issue
     """
     # Helper function to safely convert to string
     def safe_str(val):
@@ -98,7 +122,7 @@ def categorize_issue(description, short_desc, classification, issue_type):
         if pd.isna(val):
             return ''
         return str(val).lower()
-    
+
     # Combine all text fields for analysis
     text = ' '.join([
         safe_str(description),
@@ -106,25 +130,26 @@ def categorize_issue(description, short_desc, classification, issue_type):
         safe_str(classification),
         safe_str(issue_type)
     ])
-    
-    # Check for enterprise IT keywords first (these take precedence)
-    for category, keywords in ENTERPRISE_IT_KEYWORDS.items():
+
+    # First, check for vendor-specific keywords (these take precedence and indicate limited Apple docs)
+    for category, keywords in VENDOR_SPECIFIC_KEYWORDS.items():
         for keyword in keywords:
             if keyword in text:
-                return False, f'enterprise_{category}', 'high'
-    
-    # Check for Apple-addressable keywords
+                return False, f'vendor_{category}', 'high'
+
+    # Check for Apple-addressable keywords (inclusive approach)
     matched_categories = []
     for category, keywords in APPLE_ADDRESSABLE_KEYWORDS.items():
         for keyword in keywords:
             if keyword in text:
                 matched_categories.append(category)
                 break
-    
+
     if matched_categories:
+        # Return the first matched category with high confidence
         return True, matched_categories[0], 'high'
-    
-    # If no clear match, mark as uncertain
+
+    # If no clear match, mark as uncertain (needs manual review)
     return None, 'uncategorized', 'low'
 
 def analyze_tickets(file_path, output_format='json'):
@@ -150,18 +175,18 @@ def analyze_tickets(file_path, output_format='json'):
     # Analyze each ticket
     results = []
     apple_addressable = []
-    enterprise_it = []
+    vendor_specific = []
     uncategorized = []
-    
+
     for idx, row in df.iterrows():
         desc = row.get('description', '')
         short_desc = row.get('short_description', '')
         classification = row.get('classification', '')
         issue_type = row.get('issue_type', '')
         ticket_id = row.get('ticket_id', f'Row_{idx}')
-        
+
         is_apple, category, confidence = categorize_issue(desc, short_desc, classification, issue_type)
-        
+
         result = {
             'ticket_id': ticket_id,
             'short_description': short_desc,
@@ -171,35 +196,35 @@ def analyze_tickets(file_path, output_format='json'):
             'category': category,
             'confidence': confidence
         }
-        
+
         results.append(result)
-        
+
         if is_apple is True:
             apple_addressable.append(result)
         elif is_apple is False:
-            enterprise_it.append(result)
+            vendor_specific.append(result)
         else:
             uncategorized.append(result)
-    
+
     # Calculate frequencies
     apple_categories = Counter([r['category'] for r in apple_addressable])
-    enterprise_categories = Counter([r['category'] for r in enterprise_it])
-    
+    vendor_categories = Counter([r['category'] for r in vendor_specific])
+
     summary = {
         'total_tickets': len(df),
         'apple_addressable': len(apple_addressable),
-        'enterprise_it': len(enterprise_it),
+        'vendor_specific': len(vendor_specific),
         'uncategorized': len(uncategorized),
         'apple_addressable_pct': round(len(apple_addressable) / len(df) * 100, 1) if len(df) > 0 else 0,
         'top_apple_categories': dict(apple_categories.most_common(10)),
-        'top_enterprise_categories': dict(enterprise_categories.most_common(10)),
+        'top_vendor_categories': dict(vendor_categories.most_common(10)),
         'file_metadata': metadata
     }
-    
+
     return {
         'summary': summary,
         'apple_addressable_tickets': apple_addressable,
-        'enterprise_it_tickets': enterprise_it,
+        'vendor_specific_tickets': vendor_specific,
         'uncategorized_tickets': uncategorized,
         'all_results': results
     }
@@ -217,16 +242,21 @@ if __name__ == '__main__':
         
         # Print summary
         print("\n" + "="*80)
-        print("ANALYSIS SUMMARY")
+        print("ANALYSIS SUMMARY (Phase 1: Inclusive Approach)")
         print("="*80)
         print(f"Total Tickets: {results['summary']['total_tickets']}")
         print(f"Apple Addressable: {results['summary']['apple_addressable']} ({results['summary']['apple_addressable_pct']}%)")
-        print(f"Enterprise IT: {results['summary']['enterprise_it']}")
-        print(f"Uncategorized: {results['summary']['uncategorized']}")
-        
+        print(f"Vendor-Specific (Limited Apple Docs): {results['summary']['vendor_specific']}")
+        print(f"Uncategorized (Needs Review): {results['summary']['uncategorized']}")
+
         print("\nTop Apple-Addressable Categories:")
         for cat, count in results['summary']['top_apple_categories'].items():
             print(f"  {cat}: {count}")
+
+        if results['summary']['top_vendor_categories']:
+            print("\nTop Vendor-Specific Categories:")
+            for cat, count in results['summary']['top_vendor_categories'].items():
+                print(f"  {cat}: {count}")
         
         # Save results
         if output_file:

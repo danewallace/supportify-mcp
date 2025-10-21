@@ -22,13 +22,14 @@ def generate_markdown(analysis, output_file):
     md_content = f"""# Apple Support Ticket Analysis Report
 
 **Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+**Analysis Approach:** Phase 1 - Inclusive categorization prioritizing Apple documentation
 
 ## Executive Summary
 
 - **Total Tickets Analyzed:** {summary['total_tickets']}
 - **Apple-Addressable Issues:** {summary['apple_addressable']} ({summary['apple_addressable_pct']}%)
-- **Enterprise IT Issues:** {summary['enterprise_it']}
-- **Uncategorized:** {summary['uncategorized']}
+- **Vendor-Specific Issues (Limited Apple Docs):** {summary.get('vendor_specific', summary.get('enterprise_it', 0))}
+- **Uncategorized (Needs Review):** {summary['uncategorized']}
 
 ---
 
@@ -128,9 +129,55 @@ def get_apple_resources(category):
         'permissions': """
 - [Change Privacy & Security settings on Mac - Apple Support](https://support.apple.com/guide/mac-help/change-privacy-security-settings-mh40596)
 - [Control app access to files and folders on Mac - Apple Support](https://support.apple.com/guide/mac-help/control-access-files-folders-mchld5a35146)
+""",
+        'mdm_management': """
+- [Apple Platform Deployment - Apple Support](https://support.apple.com/guide/deployment/)
+- [Intro to Apple Business Manager - Apple Support](https://support.apple.com/guide/apple-business-manager/)
+- [Device enrollment overview - Apple Support](https://support.apple.com/guide/deployment/intro-to-mdm-dep00002)
+- [Configuration Profile Reference - Apple Developer](https://developer.apple.com/documentation/devicemanagement/configuring_multiple_devices)
+- [Use Mobile Device Management - Apple Support](https://support.apple.com/guide/deployment/use-mobile-device-management-dep0dd0c7e7)
+""",
+        'app_deployment': """
+- [Deploy apps on Mac - Apple Support](https://support.apple.com/guide/deployment/deploy-apps-depc0daa4f58)
+- [Manage apps with MDM - Apple Support](https://support.apple.com/guide/deployment/manage-apps-with-mdm-dep93a3baa3)
+- [Create a package installer for Mac - Apple Developer](https://developer.apple.com/documentation/xcode/distributing-software-using-installer-packages)
+- [About app installation on Mac - Apple Support](https://support.apple.com/guide/mac-help/install-and-uninstall-apps-mh35835)
+""",
+        'enterprise_auth': """
+- [Integrate macOS with Microsoft Active Directory - Apple Support](https://support.apple.com/guide/deployment/integrate-with-active-directory-dep9e693b01)
+- [Use Kerberos for single sign-on - Apple Support](https://support.apple.com/guide/deployment/use-kerberos-for-single-sign-on-dep35bc5e9a)
+- [Network account server settings on Mac - Apple Support](https://support.apple.com/guide/mac-help/network-account-server-settings-mh15410)
+- [Certificate-based authentication - Apple Support](https://support.apple.com/guide/deployment/certificate-based-authentication-dep10a9bb77)
+""",
+        'enterprise_network': """
+- [Configure network settings on Mac - Apple Support](https://support.apple.com/guide/deployment/configure-network-settings-depbc44d9bb)
+- [Set up 802.1X authentication - Apple Support](https://support.apple.com/guide/deployment/set-up-8021x-authentication-dep5712a6e6)
+- [Configure proxy settings on Mac - Apple Support](https://support.apple.com/guide/mac-help/change-proxy-settings-mchlp2591)
+- [Install certificates on Mac - Apple Support](https://support.apple.com/guide/deployment/install-certificates-depc0cb3c77a)
+- [VPN configurations for iPhone and iPad - Apple Support](https://support.apple.com/guide/deployment/vpn-configurations-depf02ad364)
+""",
+        'file_sharing': """
+- [Set up file sharing on Mac - Apple Support](https://support.apple.com/guide/mac-help/set-up-file-sharing-mh17131)
+- [Connect to a server or shared computer - Apple Support](https://support.apple.com/guide/mac-help/connect-mac-shared-computers-servers-mchlp1140)
+- [Change permissions for files, folders, or disks - Apple Support](https://support.apple.com/guide/mac-help/change-permissions-files-folders-disks-mchlp1203)
+- [Share files between a Mac and Windows PC - Apple Support](https://support.apple.com/guide/mac-help/share-files-between-mac-windows-mchlp1657)
+""",
+        'software_update_mgmt': """
+- [Manage software updates on Mac - Apple Support](https://support.apple.com/guide/deployment/manage-software-updates-depc4c80847a)
+- [About software update downloads - Apple Support](https://support.apple.com/HT211683)
+- [Use managed software updates - Apple Support](https://support.apple.com/guide/deployment/use-managed-software-updates-depc24465c0c)
+- [macOS update catalogs - Apple Support](https://support.apple.com/guide/deployment/macos-update-catalogs-depc331908f1)
+""",
+        'device_lifecycle': """
+- [Set up your new Mac - Apple Support](https://support.apple.com/guide/mac-help/set-up-your-new-mac-mchl8cf3c48c)
+- [Move your data to a new Mac - Apple Support](https://support.apple.com/HT204350)
+- [What to do before selling, giving away, or trading in your Mac - Apple Support](https://support.apple.com/HT201065)
+- [Erase your Mac and reset it to factory settings - Apple Support](https://support.apple.com/HT212749)
+- [Remove Activation Lock on Mac - Apple Support](https://support.apple.com/HT208987)
+- [Use Apple Configurator to provision Mac computers - Apple Support](https://support.apple.com/guide/apple-configurator-mac/)
 """
     }
-    
+
     return resources.get(category, "- Search Apple Support articles at https://support.apple.com\n")
 
 def generate_docx(analysis, output_file):
@@ -165,11 +212,11 @@ def generate_docx(analysis, output_file):
         
         summary_table.rows[1].cells[0].text = 'Apple-Addressable Issues'
         summary_table.rows[1].cells[1].text = f"{summary['apple_addressable']} ({summary['apple_addressable_pct']}%)"
-        
-        summary_table.rows[2].cells[0].text = 'Enterprise IT Issues'
-        summary_table.rows[2].cells[1].text = str(summary['enterprise_it'])
-        
-        summary_table.rows[3].cells[0].text = 'Uncategorized'
+
+        summary_table.rows[2].cells[0].text = 'Vendor-Specific Issues (Limited Apple Docs)'
+        summary_table.rows[2].cells[1].text = str(summary.get('vendor_specific', summary.get('enterprise_it', 0)))
+
+        summary_table.rows[3].cells[0].text = 'Uncategorized (Needs Review)'
         summary_table.rows[3].cells[1].text = str(summary['uncategorized'])
         
         doc.add_page_break()
