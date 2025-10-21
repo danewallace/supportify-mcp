@@ -54,25 +54,37 @@ VENDOR_SPECIFIC_KEYWORDS = {
     'org_specific': ['compliance reporting', 'hipaa', 'sox', 'custom policy']
 }
 
-def detect_file_structure(file_path):
+def detect_file_structure(file_path, sheet_name=None):
     """
     Detect the structure of the Excel file and determine header row
     Returns: (dataframe, metadata)
     """
+    # First, try to find a sheet with raw data if no sheet specified
+    if sheet_name is None:
+        try:
+            xl_file = pd.ExcelFile(file_path)
+            # Look for common raw data sheet names
+            for potential_sheet in ['Raw data', 'raw data', 'Data', 'Tickets', 'Sheet1']:
+                if potential_sheet in xl_file.sheet_names:
+                    sheet_name = potential_sheet
+                    break
+        except Exception:
+            pass
+
     # Try reading with different header rows
     for header_row in [0, 1, 2]:
         try:
-            df = pd.read_excel(file_path, header=header_row)
-            
+            df = pd.read_excel(file_path, header=header_row, sheet_name=sheet_name)
+
             # Check if we have meaningful column names
             if 'Number' in df.columns or 'Description' in df.columns or 'Short description' in df.columns:
-                return df, {'header_row': header_row, 'format': 'standard'}
+                return df, {'header_row': header_row, 'format': 'standard', 'sheet_name': sheet_name}
         except Exception:
             continue
-    
+
     # If no standard format found, read as-is
-    df = pd.read_excel(file_path)
-    return df, {'header_row': 0, 'format': 'unknown'}
+    df = pd.read_excel(file_path, sheet_name=sheet_name)
+    return df, {'header_row': 0, 'format': 'unknown', 'sheet_name': sheet_name}
 
 def normalize_columns(df):
     """

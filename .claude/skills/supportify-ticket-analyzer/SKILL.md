@@ -383,3 +383,454 @@ pip install pandas openpyxl python-docx weasyprint markdown --break-system-packa
 - Verify Supportify MCP is connected
 - Check MCP tool availability with `list-tools`
 - Fall back to pre-defined Apple resource links
+
+---
+
+## Complete Workflow: From Excel to Knowledge Base
+
+This skill provides an end-to-end workflow for transforming help desk data into actionable knowledge base articles.
+
+### Overview: The Three-Stage Process
+
+```
+Stage 1: Analyze          Stage 2: Generate         Stage 3: Populate & Deploy
+┌─────────────────┐      ┌──────────────────┐      ┌────────────────────────┐
+│  Excel File     │      │  KB Templates    │      │  Final KB Articles     │
+│  (910 tickets)  │─────>│  (Top 10 issues) │─────>│  (Ready for import)    │
+└─────────────────┘      └──────────────────┘      └────────────────────────┘
+      │                          │                           │
+      │ analyze_tickets.py       │ generate_kb_articles.py   │ Claude Code + MCP
+      │                          │                           │
+      ↓                          ↓                           ↓
+  JSON Analysis            JSON Templates            Markdown/HTML/JSON
+```
+
+### Stage 1: Analyze Help Desk Data
+
+**Input**: Excel file with support tickets
+**Output**: JSON analysis with categorized tickets
+
+```bash
+python scripts/analyze_tickets.py tickets.xlsx analysis.json
+```
+
+**What happens:**
+- Detects file structure and "Raw data" sheet automatically
+- Categorizes each ticket as Apple-addressable or vendor-specific
+- Generates frequency analysis of top issues
+- Outputs summary statistics
+
+**Example output:**
+```
+Total Tickets: 910
+Apple Addressable: 160 (17.6%)
+  wifi_network: 30 tickets
+  app_deployment: 28 tickets
+  performance: 23 tickets
+  ...
+```
+
+### Stage 2: Generate KB Article Templates
+
+**Input**: `analysis.json` from Stage 1
+**Output**: KB templates ready for MCP population
+
+```bash
+python scripts/generate_kb_articles.py analysis.json ./kb_templates/
+```
+
+**What happens:**
+- Creates template for each top issue category
+- Includes actual ticket descriptions as problem statements
+- Adds placeholders for MCP content population
+- Generates MCP workflow file (`mcp_workflow.json`)
+
+**Output files:**
+- `kb_template_{category}.json` - Individual templates
+- `all_kb_templates.json` - All templates combined
+- `mcp_workflow.json` - MCP automation workflow
+- `README.md` - Next steps instructions
+
+### Stage 3: Populate with Apple Documentation (MCP Integration)
+
+**Input**: KB templates from Stage 2
+**Output**: Complete KB articles ready for ticketing system import
+
+#### Option A: Automated with Claude Code (Recommended)
+
+Simply ask Claude Code to populate the templates:
+
+```
+Use Supportify MCP to populate the KB templates in ~/Desktop/kb_templates/
+with Apple documentation and generate final KB articles.
+```
+
+**Claude Code will:**
+1. Read each KB template
+2. Use `searchAppleDocumentation` MCP tool to find relevant articles
+3. Use `fetchAppleDocumentation` MCP tool to retrieve content
+4. Populate templates with actual troubleshooting steps
+5. Generate final KB articles in multiple formats:
+   - Markdown (`.md`) - For Confluence, Zendesk, GitHub
+   - HTML (`.html`) - For web publishing
+   - JSON (`.json`) - For API import to ServiceNow, Jira
+
+#### Option B: Manual MCP Integration
+
+For each category template:
+
+**Step 1: Search Apple Documentation**
+```python
+# Use searchAppleDocumentation MCP tool
+results = searchAppleDocumentation(
+    query="wifi network troubleshooting macOS"
+)
+# Returns: List of relevant Apple support articles
+```
+
+**Step 2: Fetch Article Content**
+```python
+# Use fetchAppleDocumentation MCP tool
+content = fetchAppleDocumentation(
+    url=results['articles'][0]['url']
+)
+# Returns: Full article content with troubleshooting steps
+```
+
+**Step 3: Populate Template**
+```python
+# Load template
+template = load_template('kb_template_wifi_network.json')
+
+# Replace placeholders with MCP content
+template['quick_steps'] = extract_steps(content)
+template['detailed_troubleshooting'] = extract_details(content)
+template['common_causes'] = extract_causes(content)
+
+# Add source citations
+template['sources'] = [article['url'] for article in results['articles']]
+```
+
+**Step 4: Generate Final KB Article**
+```python
+# Export in multiple formats
+export_markdown(template, 'wifi_network_kb.md')
+export_html(template, 'wifi_network_kb.html')
+export_json(template, 'wifi_network_kb.json')
+```
+
+---
+
+## KB Article Structure
+
+Each generated KB article includes:
+
+### Frontmatter Metadata
+```yaml
+title: How to Resolve Wi-Fi Network Issues on macOS
+category: wifi_network
+tags: [macOS, Apple, Self-Service, WiFi]
+source: Apple Official Documentation
+frequency: 30 support tickets
+created: 2025-10-21
+target_audience: End Users and Support Technicians
+```
+
+### Content Sections
+1. **Problem Description** - Based on actual ticket descriptions
+2. **Quick Resolution Steps** - Step-by-step from Apple docs
+3. **Detailed Troubleshooting** - In-depth guidance for complex cases
+4. **Common Causes** - Known issues and solutions
+5. **Enterprise Considerations** - Corporate-specific guidance
+6. **Additional Resources** - Links to Apple articles
+7. **When to Escalate** - Clear escalation criteria
+8. **Success Metrics** - Expected ticket reduction
+
+---
+
+## Import to Ticketing Systems
+
+### ServiceNow
+
+**Format**: JSON
+**API**: Knowledge Base API
+
+```bash
+# Convert markdown to ServiceNow-compatible JSON
+python scripts/export_servicenow.py wifi_network_kb.md
+
+# Import via API
+curl -X POST "https://instance.service-now.com/api/now/table/kb_knowledge" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic ..." \
+  -d @wifi_network_kb_servicenow.json
+```
+
+**ServiceNow JSON Structure:**
+```json
+{
+  "short_description": "How to Resolve Wi-Fi Network Issues on macOS",
+  "text": "<article content>",
+  "category": "Desktop Support",
+  "kb_category": "Mac Support",
+  "tags": "macOS,WiFi,Apple",
+  "source": "Apple Official Documentation"
+}
+```
+
+### Jira/Confluence
+
+**Format**: Markdown or HTML
+**API**: Confluence REST API
+
+```bash
+# Upload to Confluence
+curl -X POST "https://your-domain.atlassian.net/wiki/rest/api/content" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ..." \
+  -d '{
+    "type": "page",
+    "title": "How to Resolve Wi-Fi Network Issues on macOS",
+    "space": {"key": "IT"},
+    "body": {
+      "storage": {
+        "value": "<html content>",
+        "representation": "storage"
+      }
+    }
+  }'
+```
+
+### Zendesk
+
+**Format**: Markdown
+**API**: Help Center API
+
+```bash
+# Create article in Zendesk
+curl -X POST "https://your-domain.zendesk.com/api/v2/help_center/articles" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ..." \
+  -d '{
+    "article": {
+      "title": "How to Resolve Wi-Fi Network Issues on macOS",
+      "body": "<markdown content>",
+      "locale": "en-us",
+      "user_segment_id": null,
+      "permission_group_id": 1234
+    }
+  }'
+```
+
+### Custom/Manual Import
+
+For systems without APIs:
+1. Open the generated markdown file
+2. Copy content into your KB system's editor
+3. Adjust formatting as needed
+4. Add tags and metadata manually
+5. Publish to users
+
+---
+
+## Complete Example: End-to-End Workflow
+
+### Real Example with GSK Ticket Data
+
+**Starting Point**: 910 tickets from 6-month period
+
+```bash
+# Stage 1: Analyze tickets
+python scripts/analyze_tickets.py \
+  "GSK_tickets.xlsx" \
+  analysis.json
+
+# Output:
+# - 160 Apple-addressable issues (17.6%)
+# - Top category: WiFi (30 tickets)
+
+# Stage 2: Generate KB templates
+python scripts/generate_kb_articles.py \
+  analysis.json \
+  ./kb_templates/
+
+# Output:
+# - 10 KB templates created
+# - MCP workflow generated
+# - README with next steps
+
+# Stage 3: Populate with MCP (via Claude Code)
+# Ask Claude Code:
+"Populate the KB templates in ./kb_templates/ using Supportify MCP"
+
+# Claude Code will:
+# - Search Apple docs for each category
+# - Fetch relevant articles
+# - Generate final KB articles
+
+# Stage 4: Import to ServiceNow
+python scripts/export_servicenow.py \
+  kb_templates/wifi_network_kb_complete.md \
+  servicenow_import.json
+
+curl -X POST "https://gsk.service-now.com/api/now/table/kb_knowledge" \
+  -H "Content-Type: application/json" \
+  -d @servicenow_import.json
+```
+
+**Result:**
+- 10 new KB articles published to ServiceNow
+- Support techs have official Apple guidance
+- End users can self-service common issues
+- Expected ticket reduction: 15-20% for addressable categories
+
+---
+
+## MCP Workflow Automation
+
+The `mcp_workflow.json` file provides structured instructions for automating MCP integration:
+
+```json
+{
+  "workflow_name": "Generate KB Articles with Supportify MCP",
+  "steps": [
+    {
+      "step_number": 1,
+      "category": "wifi_network",
+      "frequency": 30,
+      "mcp_actions": [
+        {
+          "action": "searchAppleDocumentation",
+          "query": "wifi network troubleshooting macOS"
+        },
+        {
+          "action": "fetchAppleDocumentation",
+          "purpose": "Retrieve detailed content from top articles"
+        }
+      ],
+      "output": "kb_article_wifi_network.md"
+    }
+  ]
+}
+```
+
+Claude Code can read this workflow and execute all steps automatically.
+
+---
+
+## Best Practices for KB Article Management
+
+### 1. Keep Articles Updated
+- Re-analyze tickets quarterly
+- Update KB articles when new macOS versions release
+- Refresh Apple documentation links if they change
+
+### 2. Track Article Effectiveness
+- Monitor ticket volume for each category after KB publication
+- Measure deflection rate (tickets avoided due to self-service)
+- Collect feedback from support techs on article usefulness
+
+### 3. Iterate Based on Data
+- If tickets continue in a category, enhance the KB article
+- Add new troubleshooting steps based on recurring issues
+- Use MCP to fetch updated Apple guidance
+
+### 4. Maintain Source Citations
+- Always include links to original Apple articles
+- Update when Apple deprecates or replaces articles
+- Credit Apple as the authoritative source
+
+### 5. Customize for Your Environment
+- Add enterprise-specific steps (802.1X, certificates, etc.)
+- Include screenshots from your environment
+- Document your escalation paths and contacts
+
+---
+
+## Measuring Success
+
+### Key Metrics
+
+**Ticket Deflection Rate:**
+```
+Deflection Rate = (Tickets Before - Tickets After) / Tickets Before × 100%
+
+Example:
+- WiFi tickets before KB: 30 per 6 months
+- WiFi tickets after KB: 22 per 6 months
+- Deflection rate: (30-22)/30 = 26.7%
+```
+
+**Self-Service Adoption:**
+- KB article views
+- Average time to resolution (should decrease)
+- Escalation rate (should decrease)
+
+**Support Tech Efficiency:**
+- Time saved per ticket resolved via KB
+- Number of tickets closed with KB reference
+
+### Expected Improvements
+
+Based on the GSK ticket analysis (160 Apple-addressable out of 910):
+
+| Metric | Before KB | After KB (Projected) | Improvement |
+|--------|-----------|---------------------|-------------|
+| Apple-addressable tickets | 160/6mo | 120-130/6mo | 20-25% reduction |
+| Average resolution time | Variable | Faster | 30-40% improvement |
+| Escalations | Higher | Lower | 15-20% reduction |
+| User satisfaction | Baseline | Improved | Self-service available |
+
+---
+
+## Scripts Reference
+
+### analyze_tickets.py
+- **Purpose**: Analyze Excel ticket data and categorize issues
+- **Input**: Excel file (auto-detects "Raw data" sheet)
+- **Output**: JSON analysis with frequency data
+
+### generate_kb_articles.py
+- **Purpose**: Create KB templates from analysis
+- **Input**: `analysis.json`
+- **Output**: KB templates + MCP workflow
+
+### populate_kb_with_mcp.py
+- **Purpose**: Generate MCP workflow instructions for Claude Code
+- **Input**: `mcp_workflow.json`
+- **Output**: Detailed instructions markdown file
+
+### export_servicenow.py (future)
+- **Purpose**: Convert markdown KB to ServiceNow JSON format
+- **Input**: Markdown KB article
+- **Output**: ServiceNow-compatible JSON
+
+### export_confluence.py (future)
+- **Purpose**: Convert markdown KB to Confluence HTML
+- **Input**: Markdown KB article
+- **Output**: Confluence-compatible HTML
+
+---
+
+## FAQ
+
+**Q: Do I need the Supportify MCP to use this skill?**
+A: No, but it's recommended. Without MCP, you'll use pre-defined Apple resource links instead of fetching live content.
+
+**Q: Can I customize the KB templates?**
+A: Yes! Templates are JSON files you can edit before population.
+
+**Q: What if my ticketing system isn't listed?**
+A: Use the markdown output and copy/paste into your system, or create a custom export script.
+
+**Q: How often should I re-analyze tickets?**
+A: Quarterly is recommended to identify new trends and update KB articles.
+
+**Q: Can I add my own troubleshooting steps?**
+A: Absolutely! Edit the generated KB articles to add enterprise-specific guidance.
+
+**Q: What about non-Apple issues?**
+A: The skill identifies vendor-specific issues separately. These need vendor documentation or in-house KB creation.
+
+**Q: How do I know if a KB article is effective?**
+A: Track ticket volume for that category before and after publication. A 15-25% reduction is typical.
