@@ -800,10 +800,11 @@ Based on the GSK ticket analysis (160 Apple-addressable out of 910):
 - **Input**: `mcp_workflow.json`
 - **Output**: Detailed instructions markdown file
 
-### export_servicenow.py (future)
+### export_servicenow.py
 - **Purpose**: Convert markdown KB to ServiceNow JSON format
-- **Input**: Markdown KB article
-- **Output**: ServiceNow-compatible JSON
+- **Input**: Markdown KB article(s)
+- **Output**: ServiceNow-compatible JSON + import script
+- **Documentation**: See [docs/SERVICENOW_IMPORT.md](docs/SERVICENOW_IMPORT.md)
 
 ### export_confluence.py (future)
 - **Purpose**: Convert markdown KB to Confluence HTML
