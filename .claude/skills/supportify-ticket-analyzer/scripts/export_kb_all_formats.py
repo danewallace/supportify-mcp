@@ -441,8 +441,21 @@ def export_docx(markdown_file, output_file):
         # Horizontal rule
         elif line.strip() == '---':
             hr_para = doc.add_paragraph()
-            hr_run = hr_para.add_run('_' * 80)
-            hr_run.font.color.rgb = RGBColor(200, 200, 200)
+            # Add bottom border to create a clean horizontal line
+            pPr = hr_para._element.get_or_add_pPr()
+            pBdr = OxmlElement('w:pBdr')
+            bottom = OxmlElement('w:bottom')
+            bottom.set(qn('w:val'), 'single')
+            bottom.set(qn('w:sz'), '6')  # Border width (1/8 pt)
+            bottom.set(qn('w:space'), '1')
+            bottom.set(qn('w:color'), 'D0D0D0')  # Light gray
+            pBdr.append(bottom)
+            pPr.append(pBdr)
+            # Add small spacing
+            spacing = OxmlElement('w:spacing')
+            spacing.set(qn('w:after'), '100')
+            spacing.set(qn('w:before'), '100')
+            pPr.append(spacing)
         # Lists
         elif line.strip().startswith('- ') or line.strip().startswith('* '):
             list_text = line.strip()[2:]
