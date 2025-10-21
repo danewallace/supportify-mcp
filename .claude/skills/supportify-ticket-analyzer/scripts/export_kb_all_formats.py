@@ -60,10 +60,35 @@ def parse_frontmatter(content):
 def markdown_to_html(markdown_text, full_page=False):
     """Convert markdown to HTML"""
     if MARKDOWN_AVAILABLE:
+        # Pre-process: Convert checkmark lines to list items
+        # Lines starting with ✓ should become list items
+        processed_text = []
+        lines = markdown_text.split('\n')
+        in_checkmark_list = False
+
+        for i, line in enumerate(lines):
+            if line.strip().startswith('✓ '):
+                if not in_checkmark_list:
+                    # Start of checkmark list
+                    in_checkmark_list = True
+                # Convert ✓ to - for markdown list
+                processed_text.append('- ' + line.strip()[2:])
+            else:
+                if in_checkmark_list and line.strip() and not line.strip().startswith('✓'):
+                    # End of checkmark list
+                    in_checkmark_list = False
+                processed_text.append(line)
+
+        markdown_text = '\n'.join(processed_text)
+
         html_body = markdown.markdown(
             markdown_text,
             extensions=['extra', 'codehilite', 'tables', 'toc']
         )
+
+        # Post-process: Style checkmark list items
+        html_body = html_body.replace('<li>✓', '<li class="checkmark">✓')
+        html_body = re.sub(r'<li>([^<]*)</li>', lambda m: f'<li>{m.group(1)}</li>' if not m.group(1).strip().startswith('✓') else f'<li class="checkmark">{m.group(1)}</li>', html_body)
     else:
         # Basic fallback
         html_body = markdown_text
@@ -164,6 +189,13 @@ def markdown_to_html(markdown_text, full_page=False):
             border-radius: 5px;
             margin-bottom: 20px;
             font-size: 0.9em;
+        }}
+        .checkmark {{
+            color: #00AA00;
+            font-weight: 500;
+        }}
+        li.checkmark {{
+            margin-bottom: 8px;
         }}
     </style>
 </head>
