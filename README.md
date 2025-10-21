@@ -1,21 +1,29 @@
 # Supportify MCP
 
-Making Apple Support guides AI-readable.
+Making Apple Support guides and training tutorials AI-readable.
 
-This MCP server provides access to Apple Platform Security and Deployment guides in an AI-readable Markdown format by parsing the HTML content from Apple Support pages.
+This MCP server provides access to Apple Platform Security and Deployment guides in an AI-readable Markdown format by parsing the HTML content from Apple Support pages. It also provides access to the official Apple Device Support Training course with 40+ tutorials.
 
-**✨ New**: Browse 257+ deployment topics, search by keyword, and discover any guide content with our powerful discovery features!
+**✨ New**: Access Apple's official Device Support Training course (14hr 15min) with tutorials covering iPhone, iPad, and Mac troubleshooting, setup, networking, security, and diagnostics!
 
-## Supported Guides
+## Supported Content
 
+### Apple Platform Guides
 - **[Apple Platform Security Guide](https://support.apple.com/guide/security/welcome/web)** - Comprehensive guide on Apple platform security
 - **[Apple Platform Deployment Guide](https://support.apple.com/guide/deployment/welcome/web)** - Guide for deploying Apple devices in enterprise environments
 
+### Apple Device Support Training
+- **[Apple Device Support Training](https://it-training.apple.com/tutorials/apt-support/)** - Official training course for Mac, iPhone, and iPad support (40+ tutorials, 14hr 15min total)
+  - Getting Started (12 tutorials)
+  - iPhone and iPad Support (14 tutorials)
+  - Mac Support (14 tutorials)
+
 ## Features
 
-- 🔍 **Search & Discovery** - Search 257+ topics across both guides by keyword
-- 📚 **Table of Contents** - Browse complete topic lists with titles and URLs
+- 🔍 **Search & Discovery** - Search 257+ topics across guides and 40+ training tutorials by keyword
+- 📚 **Table of Contents** - Browse complete topic lists and training course structure
 - 📄 **Full Content Extraction** - Get comprehensive markdown with intro paragraphs, sections, links, and published dates
+- 🎓 **Training Tutorials** - Access Apple's official Device Support training course
 - ⚡ **Fast & Efficient** - Regex-based HTML parsing with no duplication
 - 🤖 **MCP Integration** - Works with AI assistants via Model Context Protocol
 - 📊 **JSON & Markdown** - Flexible output formats for different use cases
@@ -24,9 +32,11 @@ This MCP server provides access to Apple Platform Security and Deployment guides
 
 ### HTTP API
 
-The service provides a powerful HTTP interface for accessing Apple Support guide content:
+The service provides a powerful HTTP interface for accessing Apple Support guide content and training tutorials:
 
-#### 1. Discovery - Browse All Topics
+#### Apple Platform Guides
+
+##### 1. Discovery - Browse All Topics
 
 Get the complete table of contents:
 
@@ -54,7 +64,7 @@ Returns:
 }
 ```
 
-#### 2. Search - Find Topics by Keyword
+##### 2. Search - Find Topics by Keyword
 
 Search for specific topics across the guides:
 
@@ -86,7 +96,7 @@ Returns matching topics:
 }
 ```
 
-#### 3. Get Full Content - Access Complete Documentation
+##### 3. Get Full Content - Access Complete Documentation
 
 Once you find a topic (via search or ToC), get its full markdown content:
 
@@ -116,7 +126,7 @@ There are four types of declarations...
 *Source: [https://support.apple.com/guide/deployment/...](https://support.apple.com/guide/deployment/...)*
 ```
 
-#### Complete Workflow Example
+##### Complete Workflow Example
 
 **User asks: "What are the device enrollment options?"**
 
@@ -133,7 +143,7 @@ curl http://localhost:51345/guide/deployment/enrollment-methods-for-apple-device
 # Returns comprehensive 3KB markdown documentation with all details
 ```
 
-#### JSON Response Format
+##### JSON Response Format
 
 Request with `Accept: application/json` header for structured output:
 
@@ -146,6 +156,102 @@ Returns:
 {
   "url": "https://support.apple.com/guide/security/secure-enclave-sec59b0b31ff/web",
   "content": "# Secure Enclave\n\n## Overview\n\nThe Secure Enclave is a dedicated secure subsystem..."
+}
+```
+
+#### Apple Device Support Training
+
+##### 1. Search Training Tutorials
+
+Search for official Apple training content by topic:
+
+```bash
+# Search for backup tutorials
+curl "http://localhost:51345/training/search?q=backup" | jq
+
+# Search with platform filter
+curl "http://localhost:51345/training/search?q=network&platform=mac" | jq
+
+# Search for troubleshooting tutorials
+curl "http://localhost:51345/training/search?q=troubleshooting" | jq
+```
+
+Returns matching tutorials:
+```json
+{
+  "query": "backup",
+  "platform": "all",
+  "totalResults": 4,
+  "results": [
+    {
+      "tutorialId": "sup005",
+      "title": "Backing Up iPhone or iPad",
+      "abstract": "If you don't have a backup process in place...",
+      "estimatedTime": "1hr 0min",
+      "url": "https://it-training.apple.com/tutorials/support/sup005",
+      "kind": "project",
+      "volume": "iPhone and iPad",
+      "chapter": "Setting Up and Restoring iPhone or iPad"
+    }
+  ]
+}
+```
+
+##### 2. Get Tutorial Details
+
+Fetch details for a specific tutorial by ID:
+
+```bash
+# Get backup tutorial details
+curl "http://localhost:51345/training/sup005" | jq
+
+# Get WiFi troubleshooting tutorial
+curl "http://localhost:51345/training/sup110" | jq
+```
+
+Returns:
+```json
+{
+  "tutorialId": "sup005",
+  "title": "Backing Up iPhone or iPad",
+  "abstract": "If you don't have a backup process in place...",
+  "estimatedTime": "1hr 0min",
+  "kind": "project",
+  "url": "https://it-training.apple.com/tutorials/support/sup005"
+}
+```
+
+##### 3. Browse Training Catalog
+
+Get the complete course structure:
+
+```bash
+curl "http://localhost:51345/training/catalog" | jq
+```
+
+Returns:
+```json
+{
+  "title": "Learn How to Support Apple Devices",
+  "estimatedTime": "14hr 15min",
+  "totalVolumes": 3,
+  "volumes": [
+    {
+      "name": "Getting Started",
+      "chapters": [
+        {
+          "name": "Preparing for the Course",
+          "tutorials": [
+            {
+              "id": "sup001",
+              "title": "What You'll Need",
+              "estimatedTime": "10min"
+            }
+          ]
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -189,11 +295,36 @@ Or if deploying to a server:
 
 #### Available Tools
 
+**Support Guide Tools:**
+
+- `searchAppleSupportGuide` - Search for topics in Apple Platform Security or Deployment guides
+  - Parameters:
+    - `guide` (enum): "security" or "deployment"
+    - `query` (string): Search query
+  - Returns: List of matching topics with slugs and URLs
+
 - `fetchAppleSupportGuide` - Fetches Apple Support guide pages by guide name and path
   - Parameters:
     - `guide` (enum): "security" or "deployment"
     - `path` (string): Page path/slug (e.g., "welcome", "intro-to-declarative-device-management-depb1bab77f8")
   - Returns: Content as Markdown
+
+**Training Tutorial Tools:**
+
+- `searchAppleTraining` - Search for training tutorials in Apple Device Support course
+  - Parameters:
+    - `query` (string): Search query (e.g., "backup", "wifi troubleshooting")
+    - `platform` (enum, optional): "iphone", "ipad", "mac", or "all"
+  - Returns: List of matching tutorials with IDs, titles, durations, and URLs
+
+- `fetchAppleTraining` - Fetch a specific training tutorial by ID
+  - Parameters:
+    - `tutorialId` (string): Tutorial ID from search results (e.g., "sup005", "sup110")
+  - Returns: Tutorial details including title, abstract, duration, and URL
+
+- `listAppleTrainingCatalog` - Get the complete training course structure
+  - Parameters: None
+  - Returns: Full course structure with all volumes, chapters, and tutorials
 
 ## Testing
 
@@ -287,11 +418,26 @@ npx wrangler deploy
 
 ## API Endpoints
 
+### Support Guides
+
 | Endpoint | Method | Description | Example |
 |----------|--------|-------------|---------|
 | `/guide/{guide}/toc` | GET | List all topics in a guide | `/guide/deployment/toc` |
 | `/guide/{guide}/search` | GET | Search topics by keyword | `/guide/deployment/search?q=enrollment` |
 | `/guide/{guide}/{slug}` | GET | Get full content for a topic | `/guide/security/secure-enclave-sec59b0b31ff` |
+
+### Training Tutorials
+
+| Endpoint | Method | Description | Example |
+|----------|--------|-------------|---------|
+| `/training/catalog` | GET | Get complete course structure | `/training/catalog` |
+| `/training/search` | GET | Search tutorials by keyword | `/training/search?q=backup&platform=iphone` |
+| `/training/{tutorialId}` | GET | Get tutorial details by ID | `/training/sup005` |
+
+### MCP Protocol
+
+| Endpoint | Method | Description | Example |
+|----------|--------|-------------|---------|
 | `/mcp` | POST | MCP protocol endpoint | MCP clients only |
 
 ## Contributing

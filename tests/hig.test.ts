@@ -288,14 +288,14 @@ describe("HIG Module", () => {
       )
 
       expect(tocResult).toContain(
-        "*Extracted by [sosumi.ai](https://sosumi.ai) - Making Apple docs AI-readable.*",
+        "*Extracted by [supportify-mcp.pages.dev](https://supportify-mcp.pages.dev) - Making Apple Support guides AI-readable.*",
       )
       expect(tocResult).toContain(
         "*This is unofficial content. All Human Interface Guidelines belong to Apple Inc.*",
       )
 
       expect(pageResult).toContain(
-        "*Extracted by [sosumi.ai](https://sosumi.ai) - Making Apple docs AI-readable.*",
+        "*Extracted by [supportify-mcp.pages.dev](https://supportify-mcp.pages.dev) - Making Apple Support guides AI-readable.*",
       )
       expect(pageResult).toContain(
         "*This is unofficial content. All Human Interface Guidelines belong to Apple Inc.*",

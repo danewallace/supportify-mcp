@@ -51,7 +51,7 @@ if (process.env.CI === "1") {
         expect(result).toContain("[count](/documentation/swift/array/count)")
 
         // Footer validation
-        expect(result).toContain("*Extracted by [sosumi.ai](https://sosumi.ai)")
+        expect(result).toContain("*Extracted by [supportify-mcp.pages.dev](https://supportify-mcp.pages.dev)")
         expect(result).toContain(
           "*This is unofficial content. All documentation belongs to Apple Inc.*",
         )

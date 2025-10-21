@@ -39,7 +39,7 @@ describe("Integration Tests with Mocked Apple API", () => {
 
     expect(markdown).toContain("# Array")
     expect(markdown).toContain("> An ordered, random-access collection.")
-    expect(markdown).toContain("*Extracted by [sosumi.ai](https://sosumi.ai)")
+    expect(markdown).toContain("*Extracted by [supportify-mcp.pages.dev](https://supportify-mcp.pages.dev)")
 
     // Verify the correct Apple API was called
     expect(global.fetch).toHaveBeenCalledTimes(1)
