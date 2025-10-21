@@ -298,10 +298,6 @@ npx wrangler deploy
 
 Issues and pull requests welcome! This project aims to make Apple documentation more accessible to AI assistants and developers.
 
-## License
-
-MIT - See LICENSE.md for details.
-
 ## Acknowledgments
 
 - Content sourced from [Apple Support](https://support.apple.com/)
