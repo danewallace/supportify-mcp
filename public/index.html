@@ -4,25 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supportify MCP - Apple Support Guides for LLMs</title>
+    <title>Supportify MCP - Apple Support Guides & Training for LLMs</title>
     <meta name="description"
-        content="Supportify MCP provides Apple Support guides in an AI-readable format, including Platform Security and Deployment documentation.">
+        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 40+ Device Support training tutorials.">
     <meta name="author" content="Supportify MCP">
     <meta name="robots" content="index, follow">
 
     <link rel="canonical" href="https://supportify-mcp.pages.dev/">
 
-    <meta property="og:title" content="Supportify MCP - Apple Support Guides for LLMs">
+    <meta property="og:title" content="Supportify MCP - Apple Support Guides & Training for LLMs">
     <meta property="og:description"
-        content="Supportify MCP provides Apple Support guides in an AI-readable format, including Platform Security and Deployment documentation.">
+        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 40+ Device Support training tutorials.">
     <meta property="og:url" content="https://supportify-mcp.pages.dev/">
     <meta property="og:site_name" content="Supportify MCP">
     <meta property="og:type" content="website">
 
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="Supportify MCP - Apple Support Guides for LLMs">
+    <meta name="twitter:title" content="Supportify MCP - Apple Support Guides & Training for LLMs">
     <meta name="twitter:description"
-        content="Supportify MCP provides Apple Support guides in an AI-readable format, including Platform Security and Deployment documentation.">
+        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 40+ Device Support training tutorials.">
 
     <meta name="theme-color" content="#6b9bd6" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#7fa8ec" media="(prefers-color-scheme: dark)">
@@ -523,22 +523,22 @@
             <span class="logo" role="img" aria-label="Supportify MCP logo" title="Making Apple Support guides accessible to AI">🛟</span>
         </h1>
         <p class="tagline">
-            <span>Making Apple Support guides AI-readable.</span>
+            <span>Making Apple Support guides and training tutorials AI-readable.</span>
             <wbr />
-            <span>Security & Deployment docs for your AI assistant.</span>
+            <span>Security, Deployment, and Device Support Training for your AI assistant.</span>
         </p>
     </header>
 
     <main>
         <header>
-            <p>Need help with Apple device deployment or security architecture? AI assistants can help!</p>
+            <p>Need help with Apple device deployment, security architecture, or support training? AI assistants can help!</p>
             <p>
-                Apple Support guides contain comprehensive information about Platform Security and Deployment,
+                Apple Support guides and training tutorials contain comprehensive information about Platform Security, Deployment, and Device Support,
                 but they're difficult for AI assistants to parse and understand.
                 This service makes them accessible in clean, AI-readable Markdown format.
             </p>
             <p>
-                Access 257+ deployment topics and comprehensive security documentation through a simple API or MCP integration.
+                Access 257+ deployment topics, comprehensive security documentation, and 40+ official training tutorials (14hr 15min) through a simple API or MCP integration.
             </p>
         </header>
 
@@ -577,6 +577,15 @@
                     <li><a href="/guide/security/toc">All Security Topics</a></li>
                     <li><a href="/guide/security/search?q=filevault">Search: FileVault</a></li>
                     <li><a href="/guide/security/secure-enclave-sec59b0b31ff">Secure Enclave</a></li>
+                </ul>
+
+                <h4>Device Support Training</h4>
+                <ul>
+                    <li><a href="/training/catalog">Full Training Catalog</a> <em>(40+ tutorials, 14hr 15min)</em></li>
+                    <li><a href="/training/search?q=backup">Search: Backup Tutorials</a></li>
+                    <li><a href="/training/sup005">Backing Up iPhone or iPad</a> <em>(1hr tutorial)</em></li>
+                    <li><a href="/training/search?q=troubleshooting">Search: Troubleshooting</a></li>
+                    <li><a href="/training/sup110">Troubleshooting Wi-Fi on Mac</a> <em>(15min tutorial)</em></li>
                 </ul>
             </section>
         </section>
@@ -742,7 +751,22 @@
 
             <div class="tools">
                 <h3>Available Tools</h3>
+
+                <h4>Support Guide Tools</h4>
                 <ul>
+                    <li>
+                        <dl>
+                            <dt><code>searchAppleSupportGuide</code></dt>
+                            <dd><strong>Search for topics in Apple Platform Security or Deployment guides</strong>
+                                <br>Parameters:
+                                <ul>
+                                    <li><code>guide</code> (enum): "security" or "deployment"</li>
+                                    <li><code>query</code> (string): Search query</li>
+                                </ul>
+                                <br><em>Returns list of matching topics with slugs and URLs</em>
+                            </dd>
+                        </dl>
+                    </li>
                     <li>
                         <dl>
                             <dt><code>fetchAppleSupportGuide</code></dt>
@@ -753,6 +777,44 @@
                                     <li><code>path</code> (string): Page path/slug (e.g., "secure-enclave-sec59b0b31ff", "intro-to-declarative-device-management-depb1bab77f8")</li>
                                 </ul>
                                 <br><em>Returns content as Markdown</em>
+                            </dd>
+                        </dl>
+                    </li>
+                </ul>
+
+                <h4>Training Tutorial Tools</h4>
+                <ul>
+                    <li>
+                        <dl>
+                            <dt><code>searchAppleTraining</code></dt>
+                            <dd><strong>Search for training tutorials in Apple Device Support course</strong>
+                                <br>Parameters:
+                                <ul>
+                                    <li><code>query</code> (string): Search query (e.g., "backup", "wifi troubleshooting")</li>
+                                    <li><code>platform</code> (enum, optional): "iphone", "ipad", "mac", or "all"</li>
+                                </ul>
+                                <br><em>Returns list of matching tutorials with IDs, titles, durations, and URLs</em>
+                            </dd>
+                        </dl>
+                    </li>
+                    <li>
+                        <dl>
+                            <dt><code>fetchAppleTraining</code></dt>
+                            <dd><strong>Fetch a specific training tutorial by ID</strong>
+                                <br>Parameters:
+                                <ul>
+                                    <li><code>tutorialId</code> (string): Tutorial ID from search results (e.g., "sup005", "sup110")</li>
+                                </ul>
+                                <br><em>Returns tutorial details including title, abstract, duration, and URL</em>
+                            </dd>
+                        </dl>
+                    </li>
+                    <li>
+                        <dl>
+                            <dt><code>listAppleTrainingCatalog</code></dt>
+                            <dd><strong>Get the complete training course structure</strong>
+                                <br>Parameters: None
+                                <br><em>Returns full course structure with all volumes, chapters, and tutorials</em>
                             </dd>
                         </dl>
                     </li>
