@@ -461,6 +461,37 @@ This reference document defines which support issues can be addressed using Appl
 
 ---
 
+### 18. General macOS Issues
+
+**Description:** Miscellaneous macOS issues that don't fit specific categories but can still benefit from Apple documentation and troubleshooting guides
+
+**Keywords:**
+- Any Mac-related issue not matching specific categories above
+- General troubleshooting
+- System behavior
+- User experience issues
+
+**Apple Resources:**
+- macOS User Guide: https://support.apple.com/guide/mac-help
+- Apple Support: https://support.apple.com/mac
+- Apple Platform Deployment: https://support.apple.com/guide/deployment
+- Apple Security Updates: https://support.apple.com/HT201222
+- Apple Support Communities: https://discussions.apple.com
+
+**Common Issues:**
+- Various user-reported problems
+- General system questions
+- Feature requests or usage questions
+- Unspecified technical issues
+
+**Categorization Logic:**
+- This is the DEFAULT category for tickets uploaded to the analysis tool
+- Since users upload Apple help desk data, we assume issues are Apple-addressable unless they're clearly vendor-specific
+- Maximizes the utility of Apple documentation for ticket deflection
+- Confidence level: Medium (may benefit from manual review for better categorization)
+
+---
+
 ## Issues with LIMITED Apple Documentation
 
 These issues require vendor-specific support and have limited or no Apple documentation:
@@ -527,25 +558,33 @@ When analyzing support tickets:
 
 ## Categorization Philosophy
 
-**Inclusive Approach (Phase 1):**
-- When in doubt, categorize as Apple-addressable if Apple documentation exists
+**Highly Inclusive Approach:**
+- **Assume Apple-addressable by default** - Since users upload Apple help desk data, tickets are assumed to be Mac-related issues that can benefit from Apple documentation
+- Only exclude tickets that are clearly vendor-specific (JAMF policies, third-party app crashes, vendor VPN clients, etc.)
 - Recognize that Apple provides extensive enterprise and deployment documentation
 - MDM, authentication, networking, and app deployment are documented by Apple
-- Only exclude truly vendor-specific implementations
+- Maximizes ticket deflection opportunities with Apple documentation
+
+**Default Behavior:**
+- Tickets matching specific categories (1-17) → Categorized with high confidence
+- Tickets without clear category matches → Categorized as "General macOS Issues" (Category 18) with medium confidence
+- Only vendor-specific keyword matches → Excluded as "Limited documentation"
 
 **Examples:**
+- "Computer won't start" → **Apple-addressable** (Category 18: General macOS Issues)
 - "MDM enrollment failing" → **Apple-addressable** (Category 11: MDM & Device Management)
 - "JAMF policy not deploying" → **Limited documentation** (requires JAMF-specific knowledge)
 - "Can't connect to file share" → **Apple-addressable** (Category 15: File Sharing)
 - "Slack app crashing" → **Limited documentation** (third-party app issue)
-- "VPN won't connect" → **Apple-addressable** if using built-in VPN (Category 14)
+- "VPN won't connect" → **Apple-addressable** (Category 14: Enterprise Network or Category 18)
 - "Cisco AnyConnect issues" → **Limited documentation** (vendor-specific client)
+- "Screen flickering occasionally" → **Apple-addressable** (Category 18: General macOS Issues)
 
 ## Confidence Levels
 
-- **High Confidence:** Clear keyword matches with Apple documentation available
-- **Medium Confidence:** Some keyword matches but context may be vendor-specific
-- **Low Confidence:** Ambiguous description, may need human review
+- **High Confidence:** Clear keyword matches with Apple documentation available (Categories 1-17)
+- **Medium Confidence:** No specific category match, but assumed Apple-addressable (Category 18)
+- Vendor-specific issues are marked as "Limited documentation" and excluded from Apple-addressable count
 
 ## Integration with Supportify MCP
 

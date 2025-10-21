@@ -121,9 +121,10 @@ def categorize_issue(description, short_desc, classification, issue_type):
     Categorize if an issue can be addressed by Apple documentation
     Returns: (is_apple_addressable, category, confidence)
 
-    Phase 1 Inclusive Approach:
-    - Prioritize Apple-addressable categorization when Apple docs exist
-    - Only mark as vendor-specific if clearly a vendor implementation issue
+    Inclusive Approach:
+    - Assume all tickets are Apple-addressable by default (since users upload Apple help desk data)
+    - Only exclude tickets that are clearly vendor-specific (Jamf-only, third-party app crashes, etc.)
+    - This maximizes the usefulness of Apple documentation for ticket deflection
     """
     # Helper function to safely convert to string
     def safe_str(val):
@@ -143,13 +144,13 @@ def categorize_issue(description, short_desc, classification, issue_type):
         safe_str(issue_type)
     ])
 
-    # First, check for vendor-specific keywords (these take precedence and indicate limited Apple docs)
+    # First, check for vendor-specific keywords (these are NOT Apple-addressable)
     for category, keywords in VENDOR_SPECIFIC_KEYWORDS.items():
         for keyword in keywords:
             if keyword in text:
                 return False, f'vendor_{category}', 'high'
 
-    # Check for Apple-addressable keywords (inclusive approach)
+    # Check for Apple-addressable keywords for better categorization
     matched_categories = []
     for category, keywords in APPLE_ADDRESSABLE_KEYWORDS.items():
         for keyword in keywords:
@@ -161,8 +162,9 @@ def categorize_issue(description, short_desc, classification, issue_type):
         # Return the first matched category with high confidence
         return True, matched_categories[0], 'high'
 
-    # If no clear match, mark as uncertain (needs manual review)
-    return None, 'uncategorized', 'low'
+    # Default: If no specific category matched but not vendor-specific, assume Apple-addressable
+    # These are general Mac issues that can likely benefit from Apple documentation
+    return True, 'general_macos_issue', 'medium'
 
 def analyze_tickets(file_path, output_format='json'):
     """
