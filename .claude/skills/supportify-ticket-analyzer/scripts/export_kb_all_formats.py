@@ -389,15 +389,47 @@ def export_docx(markdown_file, output_file):
             paragraph.add_run(text[last_end:])
 
     def add_hyperlink(paragraph, url, text):
-        """Add a hyperlink-styled run to a paragraph"""
-        # python-docx hyperlink creation is complex and error-prone
-        # Using styled text (blue + underline) provides clear visual indication
-        run = paragraph.add_run(text)
-        run.font.color.rgb = RGBColor(0, 102, 204)  # Blue color
-        run.underline = True
+        """Add a clickable hyperlink to a paragraph"""
+        # This gets the paragraph's part (document.xml.rels)
+        part = paragraph.part
+        r_id = part.relate_to(url, 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink', is_external=True)
 
-        # Note: The URL is intentionally not displayed - this is standard for
-        # hyperlink text in documents. Users know blue underlined text is clickable.
+        # Create the w:hyperlink tag
+        hyperlink = OxmlElement('w:hyperlink')
+        hyperlink.set(qn('r:id'), r_id)
+
+        # Create a new run element
+        new_run = OxmlElement('w:r')
+
+        # Create run properties
+        rPr = OxmlElement('w:rPr')
+
+        # Set the hyperlink style
+        rStyle = OxmlElement('w:rStyle')
+        rStyle.set(qn('w:val'), 'Hyperlink')
+        rPr.append(rStyle)
+
+        # Set color to blue
+        color = OxmlElement('w:color')
+        color.set(qn('w:val'), '0066CC')
+        rPr.append(color)
+
+        # Set underline
+        u = OxmlElement('w:u')
+        u.set(qn('w:val'), 'single')
+        rPr.append(u)
+
+        new_run.append(rPr)
+
+        # Create the text element
+        t = OxmlElement('w:t')
+        t.text = text
+        new_run.append(t)
+
+        hyperlink.append(new_run)
+
+        # Append to paragraph element
+        paragraph._element.append(hyperlink)
 
     # Process markdown content
     lines = body.split('\n')
