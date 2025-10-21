@@ -45,6 +45,29 @@ __pycache__/
 # Auto-generated scripts
 import_to_servicenow.sh
 
+# Ticket analyzer outputs (contains customer data)
+**/analysis_output.json
+**/analysis.json
+**/kb_templates/
+**/output/
+**/reports/
+*_analysis.json
+*_kb.md
+*_kb.html
+*_kb.docx
+*_kb.pdf
+*_kb.json
+*_servicenow.json
+support_analysis.*
+all_kb_templates.json
+mcp_workflow.json
+
+# Input ticket data (customer data - never commit)
+**/tickets.xlsx
+**/tickets.xls
+**/*_tickets.xlsx
+**/*_tickets.xls
+
 .dev.vars*
 !.dev.vars.example
 .env*
