@@ -10,6 +10,7 @@ import { createMcpServer } from "./lib/mcp"
 import { fetchAndRenderSupportGuide, fetchTableOfContents, searchToc } from "./lib/support"
 import {
   fetchTrainingTutorial,
+  fetchTrainingTutorialContent,
   getTrainingStructure,
   searchTrainingTutorials,
 } from "./lib/training"
@@ -252,8 +253,16 @@ app.get("/training/search", async (c) => {
 // Training tutorial route: /training/{tutorialId}
 app.get("/training/:tutorialId", async (c) => {
   const tutorialId = c.req.param("tutorialId")
+  const acceptHeader = c.req.header("accept") || ""
 
   try {
+    // Check if markdown content is requested
+    if (acceptHeader.includes("text/markdown") || acceptHeader.includes("text/plain")) {
+      const markdown = await fetchTrainingTutorialContent(tutorialId)
+      return c.text(markdown, 200, { "Content-Type": "text/markdown; charset=utf-8" })
+    }
+
+    // Default: return JSON metadata
     const tutorial = await fetchTrainingTutorial(tutorialId)
 
     if (!tutorial) {

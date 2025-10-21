@@ -2,7 +2,12 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { z } from "zod"
 
 import { fetchAndRenderSupportGuide, fetchTableOfContents, searchToc } from "./support"
-import { fetchTrainingTutorial, getTrainingStructure, searchTrainingTutorials } from "./training"
+import {
+  fetchTrainingTutorial,
+  fetchTrainingTutorialContent,
+  getTrainingStructure,
+  searchTrainingTutorials,
+} from "./training"
 
 export function createMcpServer() {
   const server = new McpServer({
@@ -300,7 +305,7 @@ export function createMcpServer() {
     {
       title: "Fetch Apple Training Tutorial",
       description:
-        "Fetch a specific Apple Device Support training tutorial by ID. Returns tutorial metadata including title, abstract, estimated time, and URL. Use searchAppleTraining first to find the correct tutorial ID. IMPORTANT: When using this information, cite the source URL.",
+        "Fetch a specific Apple Device Support training tutorial by ID. Returns full tutorial content as markdown including overview, sections, tasks, and assessments. Use searchAppleTraining first to find the correct tutorial ID. IMPORTANT: When using this information, cite the source URL.",
       inputSchema: {
         tutorialId: z
           .string()
@@ -317,30 +322,8 @@ export function createMcpServer() {
     },
     async ({ tutorialId }) => {
       try {
-        const tutorial = await fetchTrainingTutorial(tutorialId)
-
-        if (!tutorial) {
-          throw new Error(`Tutorial "${tutorialId}" not found`)
-        }
-
-        const abstractText = tutorial.abstract.map((item) => item.text).join(" ")
-        const tutorialUrl = `https://it-training.apple.com${tutorial.url}`
-
-        // Format tutorial as markdown
-        let markdown = `# ${tutorial.title}\n\n`
-
-        if (tutorial.estimatedTime) {
-          markdown += `**Estimated Time**: ${tutorial.estimatedTime}\n\n`
-        }
-
-        markdown += `**Type**: ${tutorial.kind}\n\n`
-        markdown += `**URL**: ${tutorialUrl}\n\n`
-        markdown += `## Overview\n\n${abstractText}\n\n`
-
-        markdown += `---\n\n`
-        markdown += `**Note**: This is a training tutorial from Apple's Device Support course. `
-        markdown += `The full interactive tutorial with step-by-step guidance is available at: ${tutorialUrl}\n\n`
-        markdown += `**⚠️ IMPORTANT**: When using this information to answer questions, cite this source URL in your response: ${tutorialUrl}`
+        // Fetch full tutorial content as markdown
+        const markdown = await fetchTrainingTutorialContent(tutorialId)
 
         return {
           content: [

@@ -115,7 +115,7 @@ export async function searchTrainingTutorials(
 }
 
 /**
- * Fetch a specific training tutorial by ID
+ * Fetch a specific training tutorial by ID (metadata only)
  */
 export async function fetchTrainingTutorial(tutorialId: string): Promise<TrainingTutorial | null> {
   const catalog = await fetchTrainingCatalog()
@@ -135,6 +135,89 @@ export async function fetchTrainingTutorial(tutorialId: string): Promise<Trainin
   }
 
   return null
+}
+
+/**
+ * Fetch full tutorial content with sections and tasks
+ */
+export async function fetchTrainingTutorialContent(tutorialId: string): Promise<string> {
+  const TRAINING_BASE_URL = "https://it-training.apple.com"
+
+  // Fetch the full tutorial JSON
+  const contentUrl = `${TRAINING_BASE_URL}/data/tutorials/support/${tutorialId}.json`
+  const response = await fetch(contentUrl)
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch tutorial content: ${response.status} ${response.statusText}`)
+  }
+
+  const tutorialData = await response.json()
+
+  // Convert to markdown
+  let markdown = `# ${tutorialData.metadata.title}\n\n`
+
+  // Add metadata
+  if (tutorialData.sections?.[0]?.estimatedTimeInMinutes) {
+    const hours = Math.floor(tutorialData.sections[0].estimatedTimeInMinutes / 60)
+    const mins = tutorialData.sections[0].estimatedTimeInMinutes % 60
+    const timeStr = hours > 0 ? `${hours}hr ${mins}min` : `${mins}min`
+    markdown += `**Estimated Time**: ${timeStr}\n\n`
+  }
+
+  if (tutorialData.sections?.[0]?.chapter) {
+    markdown += `**Chapter**: ${tutorialData.sections[0].chapter}\n\n`
+  }
+
+  // Add overview/abstract from hero section
+  const heroSection = tutorialData.sections?.find((s: any) => s.kind === "hero")
+  if (heroSection?.content) {
+    markdown += `## Overview\n\n`
+    for (const para of heroSection.content) {
+      if (para.type === "paragraph" && para.inlineContent) {
+        const text = para.inlineContent.map((item: any) => item.text || "").join("")
+        markdown += `${text}\n\n`
+      }
+    }
+  }
+
+  // Add tutorial sections
+  if (tutorialData.hierarchy?.modules) {
+    for (const module of tutorialData.hierarchy.modules) {
+      if (module.projects) {
+        for (const project of module.projects) {
+          if (project.sections) {
+            for (const section of project.sections) {
+              // Extract section title from reference
+              const sectionId = section.reference.split("#").pop() || ""
+              const sectionTitle = sectionId
+                .split("-")
+                .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ")
+
+              if (section.kind === "task") {
+                markdown += `### ${sectionTitle}\n\n`
+                markdown += `*Task*\n\n`
+              } else if (section.kind === "assessment") {
+                markdown += `### ${sectionTitle}\n\n`
+                markdown += `*Assessment*\n\n`
+              } else if (section.kind === "heading") {
+                markdown += `### ${sectionTitle}\n\n`
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Add footer with source
+  const tutorialUrl = `${TRAINING_BASE_URL}/tutorials/support/${tutorialId}`
+  markdown += `---\n\n`
+  markdown += `**Interactive Tutorial**: ${tutorialUrl}\n\n`
+  markdown += `*Note: This tutorial includes hands-on exercises and assessments. `
+  markdown += `Visit the interactive version for the complete learning experience.*\n`
+
+  return markdown
 }
 
 /**
