@@ -7,7 +7,11 @@ import { trimTrailingSlash } from "hono/trailing-slash"
 
 import { NotFoundError } from "./lib/fetch"
 import { createMcpServer } from "./lib/mcp"
-import { fetchAndRenderSupportGuide, fetchTableOfContents, searchToc, findTopic } from "./lib/support"
+import {
+  fetchAndRenderSupportGuide,
+  fetchTableOfContents,
+  searchToc,
+} from "./lib/support"
 
 interface Env {
   ASSETS: Fetcher
@@ -59,11 +63,11 @@ app.all("/mcp", async (c) => {
 // Table of Contents route: /guide/{guide-name}/toc
 app.get("/guide/:guide/toc", async (c) => {
   const guide = c.req.param("guide")
-  
+
   if (guide !== "security" && guide !== "deployment") {
     return c.json({ error: "Invalid guide name" }, 400)
   }
-  
+
   try {
     const toc = await fetchTableOfContents(guide as "security" | "deployment")
     return c.json({
@@ -81,24 +85,24 @@ app.get("/guide/:guide/toc", async (c) => {
 app.get("/guide/:guide/search", async (c) => {
   const guide = c.req.param("guide")
   const query = c.req.query("q")
-  
+
   if (guide !== "security" && guide !== "deployment") {
     return c.json({ error: "Invalid guide name" }, 400)
   }
-  
+
   if (!query || query.trim().length === 0) {
     return c.json({ error: "Query parameter 'q' is required" }, 400)
   }
-  
+
   try {
     const toc = await fetchTableOfContents(guide as "security" | "deployment")
     const results = searchToc(toc, query)
-    
+
     return c.json({
       guide,
       query,
       totalResults: results.length,
-      results: results.map(item => ({
+      results: results.map((item) => ({
         title: item.title,
         slug: item.slug,
         url: `/guide/${guide}/${item.slug}`,

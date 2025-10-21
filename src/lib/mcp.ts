@@ -64,7 +64,7 @@ export function createMcpServer() {
     {
       title: "Search Apple Support Guides",
       description:
-        "Search for topics in Apple Platform Security or Deployment guides. Use this FIRST to find the correct page slug before fetching content.",
+        "Search for topics in Apple Platform Security or Deployment guides. Use this FIRST to find the correct page slug before fetching content. Remember to cite the source URLs when using information from these guides in your responses.",
       inputSchema: {
         guide: z
           .enum(["security", "deployment"])
@@ -145,7 +145,7 @@ export function createMcpServer() {
     {
       title: "Fetch Apple Support Guide Page",
       description:
-        "Fetch specific Apple Platform Security or Deployment guide page by slug and return as markdown. Use searchAppleSupportGuide first to find the correct slug.",
+        "Fetch specific Apple Platform Security or Deployment guide page by slug and return as markdown. Use searchAppleSupportGuide first to find the correct slug. IMPORTANT: When answering user questions, always cite the source URLs from the articles you use. Include links to the referenced articles in your response.",
       inputSchema: {
         guide: z
           .enum(["security", "deployment"])
@@ -165,17 +165,21 @@ export function createMcpServer() {
     },
     async ({ guide, path }) => {
       try {
-        const markdown = await fetchAndRenderSupportGuide(guide, path)
+        const sourceUrl = `https://support.apple.com/guide/${guide}/${path}/web`
+        const markdown = await fetchAndRenderSupportGuide(guide, path, sourceUrl)
 
         if (!markdown || markdown.trim().length < 100) {
           throw new Error("Insufficient content in support guide page")
         }
 
+        // Add a reminder about citing sources at the end
+        const markdownWithCitation = `${markdown}\n\n---\n\n**⚠️ IMPORTANT**: When using this information to answer questions, cite this source URL in your response: ${sourceUrl}`
+
         return {
           content: [
             {
               type: "text" as const,
-              text: markdown,
+              text: markdownWithCitation,
             },
           ],
         }

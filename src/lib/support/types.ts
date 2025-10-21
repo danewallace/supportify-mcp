@@ -14,4 +14,3 @@ export interface ParsedContent {
   publishedDate?: string
   relatedLinks?: string[]
 }
-
