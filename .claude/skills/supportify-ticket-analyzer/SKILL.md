@@ -800,10 +800,17 @@ Based on the GSK ticket analysis (160 Apple-addressable out of 910):
 - **Input**: `mcp_workflow.json`
 - **Output**: Detailed instructions markdown file
 
+### export_kb_all_formats.py
+- **Purpose**: Export KB articles to multiple formats (Markdown, HTML, DOCX, PDF, ServiceNow JSON)
+- **Input**: Markdown KB article(s) - single or batch mode
+- **Output**: All distribution formats in one command
+- **Dependencies**: python-docx, markdown (PDF optional)
+- **Documentation**: See [docs/MULTI_FORMAT_EXPORT.md](docs/MULTI_FORMAT_EXPORT.md)
+
 ### export_servicenow.py
 - **Purpose**: Convert markdown KB to ServiceNow JSON format
 - **Input**: Markdown KB article(s)
-- **Output**: ServiceNow-compatible JSON + import script
+- **Output**: ServiceNow-compatible JSON + automated import script
 - **Documentation**: See [docs/SERVICENOW_IMPORT.md](docs/SERVICENOW_IMPORT.md)
 
 ### export_confluence.py (future)
