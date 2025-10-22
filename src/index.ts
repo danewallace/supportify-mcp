@@ -13,6 +13,7 @@ import {
   fetchTrainingTutorialContent,
   getTrainingStructure,
   searchTrainingTutorials,
+  type TrainingCatalogType,
 } from "./lib/training"
 
 interface Env {
@@ -201,11 +202,24 @@ This service works with Apple Platform guides:
 // APPLE TRAINING ROUTES
 // ============================================================================
 
-// Training catalog route: /training/catalog
+// Training catalog route: /training/catalog?type={catalog}
 app.get("/training/catalog", async (c) => {
+  const catalogType = (c.req.query("type") as TrainingCatalogType) || "apt-support"
+
+  // Validate catalog type
+  if (catalogType !== "apt-support" && catalogType !== "apt-deployment") {
+    return c.json(
+      {
+        error: `Invalid catalog type: ${catalogType}. Must be "apt-support" or "apt-deployment"`,
+      },
+      400,
+    )
+  }
+
   try {
-    const structure = await getTrainingStructure()
+    const structure = await getTrainingStructure(catalogType)
     return c.json({
+      catalog: catalogType,
       title: structure.title,
       estimatedTime: structure.estimatedTime,
       totalVolumes: structure.volumes.length,
@@ -217,20 +231,35 @@ app.get("/training/catalog", async (c) => {
   }
 })
 
-// Training search route: /training/search?q={query}&platform={platform}
+// Training search route: /training/search?q={query}&platform={platform}&catalog={catalog}
 app.get("/training/search", async (c) => {
   const query = c.req.query("q")
   const platform = c.req.query("platform") as "iphone" | "ipad" | "mac" | "all" | undefined
+  const catalogType = (c.req.query("catalog") as TrainingCatalogType) || "apt-support"
 
   if (!query || query.trim().length === 0) {
     return c.json({ error: "Query parameter 'q' is required" }, 400)
   }
 
+  // Validate catalog type
+  if (catalogType !== "apt-support" && catalogType !== "apt-deployment") {
+    return c.json(
+      {
+        error: `Invalid catalog type: ${catalogType}. Must be "apt-support" or "apt-deployment"`,
+      },
+      400,
+    )
+  }
+
   try {
-    const results = await searchTrainingTutorials(query, platform || "all")
+    const results = await searchTrainingTutorials(query, {
+      platform: platform || "all",
+      catalog: catalogType,
+    })
 
     return c.json({
       query,
+      catalog: catalogType,
       platform: platform || "all",
       totalResults: results.length,
       results: results.map((item) => ({
@@ -250,23 +279,34 @@ app.get("/training/search", async (c) => {
   }
 })
 
-// Training tutorial route: /training/{tutorialId}
+// Training tutorial route: /training/{tutorialId}?catalog={catalog}
 app.get("/training/:tutorialId", async (c) => {
   const tutorialId = c.req.param("tutorialId")
   const acceptHeader = c.req.header("accept") || ""
+  const catalogType = (c.req.query("catalog") as TrainingCatalogType) || "apt-support"
+
+  // Validate catalog type
+  if (catalogType !== "apt-support" && catalogType !== "apt-deployment") {
+    return c.json(
+      {
+        error: `Invalid catalog type: ${catalogType}. Must be "apt-support" or "apt-deployment"`,
+      },
+      400,
+    )
+  }
 
   try {
     // Check if markdown content is requested
     if (acceptHeader.includes("text/markdown") || acceptHeader.includes("text/plain")) {
-      const markdown = await fetchTrainingTutorialContent(tutorialId)
+      const markdown = await fetchTrainingTutorialContent(tutorialId, catalogType)
       return c.text(markdown, 200, { "Content-Type": "text/markdown; charset=utf-8" })
     }
 
     // Default: return JSON metadata
-    const tutorial = await fetchTrainingTutorial(tutorialId)
+    const tutorial = await fetchTrainingTutorial(tutorialId, catalogType)
 
     if (!tutorial) {
-      return c.json({ error: `Tutorial "${tutorialId}" not found` }, 404)
+      return c.json({ error: `Tutorial "${tutorialId}" not found in ${catalogType}` }, 404)
     }
 
     const abstractText = tutorial.abstract.map((item) => item.text).join(" ")
@@ -274,6 +314,7 @@ app.get("/training/:tutorialId", async (c) => {
 
     return c.json({
       tutorialId,
+      catalog: catalogType,
       title: tutorial.title,
       abstract: abstractText,
       estimatedTime: tutorial.estimatedTime,
@@ -299,8 +340,9 @@ Making Apple Support guides and training tutorials AI-readable.
 - **Security** - Apple Platform Security Guide
 - **Deployment** - Apple Platform Deployment Guide
 
-### Apple Device Support Training
-- **Training Course** - Complete training curriculum for Mac, iPhone, and iPad support
+### Apple Device Support & Deployment Training
+- **Device Support Training (apt-support)** - Complete training curriculum for Mac, iPhone, and iPad support
+- **Deployment Training (apt-deployment)** - MDM, deployment, and device management
 
 ## Usage
 
@@ -315,9 +357,9 @@ Making Apple Support guides and training tutorials AI-readable.
 
 **Training Tutorials:**
 \`\`\`
-/training/catalog
-/training/search?q={query}&platform={iphone|ipad|mac|all}
-/training/{tutorialId}
+/training/catalog?type={apt-support|apt-deployment}
+/training/search?q={query}&platform={iphone|ipad|mac|all}&catalog={apt-support|apt-deployment}
+/training/{tutorialId}?catalog={apt-support|apt-deployment}
 \`\`\`
 
 ### Examples
@@ -327,9 +369,11 @@ Making Apple Support guides and training tutorials AI-readable.
 - [Search Security Guide](/guide/security/search?q=encryption)
 
 **Training:**
-- [Training Catalog](/training/catalog)
-- [Search Training](/training/search?q=backup)
-- [Specific Tutorial](/training/sup005)
+- [Device Support Catalog](/training/catalog?type=apt-support)
+- [Deployment Catalog](/training/catalog?type=apt-deployment)
+- [Search Support Training](/training/search?q=backup&catalog=apt-support)
+- [Search Deployment Training](/training/search?q=mdm&catalog=apt-deployment)
+- [Specific Tutorial](/training/sup005?catalog=apt-support)
 
 ### MCP Integration
 

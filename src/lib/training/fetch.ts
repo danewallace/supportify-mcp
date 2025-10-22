@@ -5,13 +5,31 @@
 import type { TrainingCatalog, TrainingSearchResult, TrainingTutorial } from "./types"
 
 const TRAINING_BASE_URL = "https://it-training.apple.com"
-const CATALOG_URL = `${TRAINING_BASE_URL}/data/tutorials/apt-support.json`
+
+export type TrainingCatalogType = "apt-support" | "apt-deployment"
+
+/**
+ * Get catalog URL for a specific training catalog
+ */
+function getCatalogUrl(catalog: TrainingCatalogType): string {
+  return `${TRAINING_BASE_URL}/data/tutorials/${catalog}.json`
+}
+
+/**
+ * Get tutorial subdirectory for a catalog type
+ */
+function getTutorialSubdir(catalog: TrainingCatalogType): string {
+  return catalog === "apt-support" ? "support" : "deployment"
+}
 
 /**
  * Fetch the complete training catalog
  */
-export async function fetchTrainingCatalog(): Promise<TrainingCatalog> {
-  const response = await fetch(CATALOG_URL)
+export async function fetchTrainingCatalog(
+  catalog: TrainingCatalogType = "apt-support",
+): Promise<TrainingCatalog> {
+  const catalogUrl = getCatalogUrl(catalog)
+  const response = await fetch(catalogUrl)
 
   if (!response.ok) {
     throw new Error(`Failed to fetch training catalog: ${response.status} ${response.statusText}`)
@@ -25,9 +43,12 @@ export async function fetchTrainingCatalog(): Promise<TrainingCatalog> {
  */
 export async function searchTrainingTutorials(
   query: string,
-  platform?: "iphone" | "ipad" | "mac" | "all",
+  options?: {
+    platform?: "iphone" | "ipad" | "mac" | "all"
+    catalog?: TrainingCatalogType
+  },
 ): Promise<TrainingSearchResult[]> {
-  const catalog = await fetchTrainingCatalog()
+  const catalog = await fetchTrainingCatalog(options?.catalog || "apt-support")
   const results: TrainingSearchResult[] = []
   const queryLower = query.toLowerCase()
 
@@ -57,14 +78,14 @@ export async function searchTrainingTutorials(
     }
 
     // Platform filtering
-    if (platform && platform !== "all") {
+    if (options?.platform && options.platform !== "all") {
       const platformKeywords = {
         iphone: ["iphone", "ios"],
         ipad: ["ipad", "ipados"],
         mac: ["mac", "macos"],
       }
 
-      const keywords = platformKeywords[platform]
+      const keywords = platformKeywords[options.platform]
       const matchesPlatform = keywords.some((keyword) => searchText.includes(keyword))
 
       if (!matchesPlatform) {
@@ -117,11 +138,14 @@ export async function searchTrainingTutorials(
 /**
  * Fetch a specific training tutorial by ID (metadata only)
  */
-export async function fetchTrainingTutorial(tutorialId: string): Promise<TrainingTutorial | null> {
-  const catalog = await fetchTrainingCatalog()
+export async function fetchTrainingTutorial(
+  tutorialId: string,
+  catalog: TrainingCatalogType = "apt-support",
+): Promise<TrainingTutorial | null> {
+  const catalogData = await fetchTrainingCatalog(catalog)
 
   // Search through references for the tutorial
-  for (const [key, ref] of Object.entries(catalog.references)) {
+  for (const [key, ref] of Object.entries(catalogData.references)) {
     if (!("kind" in ref) || ref.type !== "topic") {
       continue
     }
@@ -140,11 +164,13 @@ export async function fetchTrainingTutorial(tutorialId: string): Promise<Trainin
 /**
  * Fetch full tutorial content with sections and tasks
  */
-export async function fetchTrainingTutorialContent(tutorialId: string): Promise<string> {
-  const TRAINING_BASE_URL = "https://it-training.apple.com"
-
+export async function fetchTrainingTutorialContent(
+  tutorialId: string,
+  catalog: TrainingCatalogType = "apt-support",
+): Promise<string> {
   // Fetch the full tutorial JSON
-  const contentUrl = `${TRAINING_BASE_URL}/data/tutorials/support/${tutorialId}.json`
+  const subdir = getTutorialSubdir(catalog)
+  const contentUrl = `${TRAINING_BASE_URL}/data/tutorials/${subdir}/${tutorialId}.json`
   const response = await fetch(contentUrl)
 
   if (!response.ok) {
@@ -211,7 +237,7 @@ export async function fetchTrainingTutorialContent(tutorialId: string): Promise<
   }
 
   // Add footer with source
-  const tutorialUrl = `${TRAINING_BASE_URL}/tutorials/support/${tutorialId}`
+  const tutorialUrl = `${TRAINING_BASE_URL}/tutorials/${subdir}/${tutorialId}`
   markdown += `---\n\n`
   markdown += `**Interactive Tutorial**: ${tutorialUrl}\n\n`
   markdown += `*Note: This tutorial includes hands-on exercises and assessments. `
@@ -223,7 +249,7 @@ export async function fetchTrainingTutorialContent(tutorialId: string): Promise<
 /**
  * Get the full training catalog structure
  */
-export async function getTrainingStructure(): Promise<{
+export async function getTrainingStructure(catalog: TrainingCatalogType = "apt-support"): Promise<{
   title: string
   estimatedTime?: string
   volumes: Array<{
@@ -238,9 +264,9 @@ export async function getTrainingStructure(): Promise<{
     }>
   }>
 }> {
-  const catalog = await fetchTrainingCatalog()
+  const catalogData = await fetchTrainingCatalog(catalog)
 
-  const volumes = catalog.sections
+  const volumes = catalogData.sections
     .filter((section) => section.kind === "volume")
     .map((section) => ({
       name: section.name || "Unnamed Volume",
@@ -248,7 +274,9 @@ export async function getTrainingStructure(): Promise<{
         name: chapter.name,
         tutorials: chapter.tutorials
           .map((tutorialIdentifier) => {
-            const tutorial = catalog.references[tutorialIdentifier] as TrainingTutorial | undefined
+            const tutorial = catalogData.references[tutorialIdentifier] as
+              | TrainingTutorial
+              | undefined
             if (!tutorial || !("kind" in tutorial)) return null
 
             return {
@@ -262,8 +290,8 @@ export async function getTrainingStructure(): Promise<{
     }))
 
   return {
-    title: catalog.metadata.title,
-    estimatedTime: catalog.metadata.estimatedTime,
+    title: catalogData.metadata.title,
+    estimatedTime: catalogData.metadata.estimatedTime,
     volumes,
   }
 }

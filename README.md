@@ -2,9 +2,11 @@
 
 Making Apple Support guides and training tutorials AI-readable.
 
-This MCP server provides access to Apple Platform Security and Deployment guides in an AI-readable Markdown format by parsing the HTML content from Apple Support pages. It also provides access to the official Apple Device Support Training course with 40+ tutorials.
+This MCP server provides access to Apple Platform Security and Deployment guides in an AI-readable Markdown format by parsing the HTML content from Apple Support pages. It also provides access to official Apple Training courses: Device Support (40+ tutorials) and Deployment & Management (50+ tutorials).
 
-**✨ New**: Access Apple's official Device Support Training course (14hr 15min) with tutorials covering iPhone, iPad, and Mac troubleshooting, setup, networking, security, and diagnostics!
+**✨ New**: Access Apple's official training courses:
+- **Device Support Training** (40+ tutorials, 14hr 15min) - iPhone, iPad, and Mac troubleshooting
+- **Deployment Training** (50+ tutorials, 11hr 45min) - MDM, deployment, and device management
 
 ## Supported Content
 
@@ -12,15 +14,22 @@ This MCP server provides access to Apple Platform Security and Deployment guides
 - **[Apple Platform Security Guide](https://support.apple.com/guide/security/welcome/web)** - Comprehensive guide on Apple platform security
 - **[Apple Platform Deployment Guide](https://support.apple.com/guide/deployment/welcome/web)** - Guide for deploying Apple devices in enterprise environments
 
-### Apple Device Support Training
-- **[Apple Device Support Training](https://it-training.apple.com/tutorials/apt-support/)** - Official training course for Mac, iPhone, and iPad support (40+ tutorials, 14hr 15min total)
+### Apple Device Training
+- **[Apple Device Support Training](https://it-training.apple.com/tutorials/apt-support/)** (40+ tutorials, 14hr 15min)
   - Getting Started (12 tutorials)
   - iPhone and iPad Support (14 tutorials)
   - Mac Support (14 tutorials)
 
+- **[Apple Deployment Training](https://it-training.apple.com/tutorials/apt-deployment/)** (50+ tutorials, 11hr 45min)
+  - MDM Planning (8 tutorials)
+  - MDM Preparation (9 tutorials)
+  - Device Enrollment (10 tutorials)
+  - Device Management (28 tutorials)
+  - Device Redeployment and Recycling (3 tutorials)
+
 ## Features
 
-- 🔍 **Search & Discovery** - Search 257+ topics across guides and 40+ training tutorials by keyword
+- 🔍 **Search & Discovery** - Search 257+ topics across guides and 90+ training tutorials by keyword
 - 📚 **Table of Contents** - Browse complete topic lists and training course structure
 - 📄 **Full Content Extraction** - Get comprehensive markdown with intro paragraphs, sections, links, and published dates
 - 🎓 **Training Tutorials** - Access Apple's official Device Support training course
@@ -159,39 +168,43 @@ Returns:
 }
 ```
 
-#### Apple Device Support Training
+#### Apple Device Training
 
 ##### 1. Search Training Tutorials
 
-Search for official Apple training content by topic:
+Search for official Apple training content across both catalogs:
 
 ```bash
-# Search for backup tutorials
-curl "http://localhost:51345/training/search?q=backup" | jq
+# Search for backup tutorials (device support)
+curl "http://localhost:51345/training/search?q=backup&catalog=apt-support" | jq
+
+# Search for MDM tutorials (deployment)
+curl "http://localhost:51345/training/search?q=mdm&catalog=apt-deployment" | jq
 
 # Search with platform filter
-curl "http://localhost:51345/training/search?q=network&platform=mac" | jq
+curl "http://localhost:51345/training/search?q=network&platform=mac&catalog=apt-support" | jq
 
 # Search for troubleshooting tutorials
-curl "http://localhost:51345/training/search?q=troubleshooting" | jq
+curl "http://localhost:51345/training/search?q=troubleshooting&catalog=apt-support" | jq
 ```
 
 Returns matching tutorials:
 ```json
 {
-  "query": "backup",
+  "query": "mdm",
+  "catalog": "apt-deployment",
   "platform": "all",
-  "totalResults": 4,
+  "totalResults": 24,
   "results": [
     {
-      "tutorialId": "sup005",
-      "title": "Backing Up iPhone or iPad",
-      "abstract": "If you don't have a backup process in place...",
-      "estimatedTime": "1hr 0min",
-      "url": "https://it-training.apple.com/tutorials/support/sup005",
-      "kind": "project",
-      "volume": "iPhone and iPad",
-      "chapter": "Setting Up and Restoring iPhone or iPad"
+      "tutorialId": "dm005",
+      "title": "Understanding How MDM Works",
+      "abstract": "With mobile device management (MDM)...",
+      "estimatedTime": "15min",
+      "url": "https://it-training.apple.com/tutorials/deployment/dm005",
+      "kind": "article",
+      "volume": "MDM Planning",
+      "chapter": "Understanding MDM"
     }
   ]
 }
@@ -202,50 +215,59 @@ Returns matching tutorials:
 Fetch details for a specific tutorial by ID:
 
 ```bash
-# Get backup tutorial details
-curl "http://localhost:51345/training/sup005" | jq
+# Get backup tutorial details (device support)
+curl "http://localhost:51345/training/sup005?catalog=apt-support" | jq
 
-# Get WiFi troubleshooting tutorial
-curl "http://localhost:51345/training/sup110" | jq
+# Get MDM tutorial details (deployment)
+curl "http://localhost:51345/training/dm005?catalog=apt-deployment" | jq
+
+# Get full tutorial content as markdown
+curl -H "Accept: text/markdown" "http://localhost:51345/training/dm005?catalog=apt-deployment"
 ```
 
 Returns:
 ```json
 {
-  "tutorialId": "sup005",
-  "title": "Backing Up iPhone or iPad",
-  "abstract": "If you don't have a backup process in place...",
-  "estimatedTime": "1hr 0min",
-  "kind": "project",
-  "url": "https://it-training.apple.com/tutorials/support/sup005"
+  "tutorialId": "dm005",
+  "catalog": "apt-deployment",
+  "title": "Understanding How MDM Works",
+  "abstract": "With mobile device management (MDM)...",
+  "estimatedTime": "15min",
+  "kind": "article",
+  "url": "https://it-training.apple.com/tutorials/deployment/dm005"
 }
 ```
 
 ##### 3. Browse Training Catalog
 
-Get the complete course structure:
+Get the complete course structure for either catalog:
 
 ```bash
-curl "http://localhost:51345/training/catalog" | jq
+# Device Support catalog (40+ tutorials)
+curl "http://localhost:51345/training/catalog?type=apt-support" | jq
+
+# Deployment & Management catalog (50+ tutorials)
+curl "http://localhost:51345/training/catalog?type=apt-deployment" | jq
 ```
 
 Returns:
 ```json
 {
-  "title": "Learn How to Support Apple Devices",
-  "estimatedTime": "14hr 15min",
-  "totalVolumes": 3,
+  "catalog": "apt-deployment",
+  "title": "Learn How to Deploy and Manage Apple Devices",
+  "estimatedTime": "11hr 45min",
+  "totalVolumes": 6,
   "volumes": [
     {
-      "name": "Getting Started",
+      "name": "MDM Planning",
       "chapters": [
         {
-          "name": "Preparing for the Course",
+          "name": "Understanding MDM",
           "tutorials": [
             {
-              "id": "sup001",
-              "title": "What You'll Need",
-              "estimatedTime": "10min"
+              "id": "dm005",
+              "title": "Understanding How MDM Works",
+              "estimatedTime": "15min"
             }
           ]
         }

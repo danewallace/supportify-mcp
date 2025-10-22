@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Supportify MCP - Apple Support Guides & Training for LLMs</title>
     <meta name="description"
-        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 40+ Device Support training tutorials.">
+        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 90+ training tutorials covering Device Support and Deployment.">
     <meta name="author" content="Supportify MCP">
     <meta name="robots" content="index, follow">
 
@@ -14,7 +14,7 @@
 
     <meta property="og:title" content="Supportify MCP - Apple Support Guides & Training for LLMs">
     <meta property="og:description"
-        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 40+ Device Support training tutorials.">
+        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 90+ training tutorials covering Device Support and Deployment.">
     <meta property="og:url" content="https://supportify-mcp.pages.dev/">
     <meta property="og:site_name" content="Supportify MCP">
     <meta property="og:type" content="website">
@@ -22,7 +22,7 @@
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="Supportify MCP - Apple Support Guides & Training for LLMs">
     <meta name="twitter:description"
-        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 40+ Device Support training tutorials.">
+        content="Supportify MCP provides Apple Support guides and training tutorials in an AI-readable format, including Platform Security, Deployment documentation, and 90+ training tutorials covering Device Support and Deployment.">
 
     <meta name="theme-color" content="#6b9bd6" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#7fa8ec" media="(prefers-color-scheme: dark)">
@@ -538,7 +538,7 @@
                 This service makes them accessible in clean, AI-readable Markdown format.
             </p>
             <p>
-                Access 257+ deployment topics, comprehensive security documentation, and 40+ official training tutorials (14hr 15min) through a simple API or MCP integration.
+                Access 257+ deployment topics, comprehensive security documentation, and 90+ official training tutorials (26hr total: Device Support 14hr 15min + Deployment 11hr 45min) through a simple API or MCP integration.
             </p>
         </header>
 
@@ -579,13 +579,14 @@
                     <li><a href="/guide/security/secure-enclave-sec59b0b31ff">Secure Enclave</a></li>
                 </ul>
 
-                <h4>Device Support Training</h4>
+                <h4>Training Tutorials</h4>
                 <ul>
-                    <li><a href="/training/catalog">Full Training Catalog</a> <em>(40+ tutorials, 14hr 15min)</em></li>
-                    <li><a href="/training/search?q=backup">Search: Backup Tutorials</a></li>
-                    <li><a href="/training/sup005">Backing Up iPhone or iPad</a> <em>(1hr tutorial)</em></li>
-                    <li><a href="/training/search?q=troubleshooting">Search: Troubleshooting</a></li>
-                    <li><a href="/training/sup110">Troubleshooting Wi-Fi on Mac</a> <em>(15min tutorial)</em></li>
+                    <li><a href="/training/catalog?type=apt-support">Device Support Catalog</a> <em>(40+ tutorials, 14hr 15min)</em></li>
+                    <li><a href="/training/catalog?type=apt-deployment">Deployment Catalog</a> <em>(50+ tutorials, 11hr 45min)</em></li>
+                    <li><a href="/training/search?q=backup&catalog=apt-support">Search: Backup Tutorials</a></li>
+                    <li><a href="/training/sup005?catalog=apt-support">Backing Up iPhone or iPad</a> <em>(1hr support tutorial)</em></li>
+                    <li><a href="/training/search?q=mdm&catalog=apt-deployment">Search: MDM Tutorials</a></li>
+                    <li><a href="/training/dm005?catalog=apt-deployment">Understanding How MDM Works</a> <em>(15min deployment tutorial)</em></li>
                 </ul>
             </section>
         </section>
@@ -787,10 +788,11 @@
                     <li>
                         <dl>
                             <dt><code>searchAppleTraining</code></dt>
-                            <dd><strong>Search for training tutorials in Apple Device Support course</strong>
+                            <dd><strong>Search for training tutorials in Apple Device Support and Deployment courses</strong>
                                 <br>Parameters:
                                 <ul>
-                                    <li><code>query</code> (string): Search query (e.g., "backup", "wifi troubleshooting")</li>
+                                    <li><code>query</code> (string): Search query (e.g., "backup", "wifi troubleshooting", "mdm")</li>
+                                    <li><code>catalog</code> (enum, optional): "apt-support", "apt-deployment", or "both" (default)</li>
                                     <li><code>platform</code> (enum, optional): "iphone", "ipad", "mac", or "all"</li>
                                 </ul>
                                 <br><em>Returns list of matching tutorials with IDs, titles, durations, and URLs</em>
@@ -803,9 +805,10 @@
                             <dd><strong>Fetch a specific training tutorial by ID</strong>
                                 <br>Parameters:
                                 <ul>
-                                    <li><code>tutorialId</code> (string): Tutorial ID from search results (e.g., "sup005", "sup110")</li>
+                                    <li><code>tutorialId</code> (string): Tutorial ID from search results (e.g., "sup005" for support, "dm005" for deployment)</li>
+                                    <li><code>catalog</code> (enum, optional): "apt-support" or "apt-deployment" (default: "apt-support")</li>
                                 </ul>
-                                <br><em>Returns tutorial details including title, abstract, duration, and URL</em>
+                                <br><em>Returns full tutorial content as markdown including overview, sections, tasks, and assessments</em>
                             </dd>
                         </dl>
                     </li>
@@ -813,7 +816,10 @@
                         <dl>
                             <dt><code>listAppleTrainingCatalog</code></dt>
                             <dd><strong>Get the complete training course structure</strong>
-                                <br>Parameters: None
+                                <br>Parameters:
+                                <ul>
+                                    <li><code>catalog</code> (enum, optional): "apt-support" or "apt-deployment" (default: "apt-support")</li>
+                                </ul>
                                 <br><em>Returns full course structure with all volumes, chapters, and tutorials</em>
                             </dd>
                         </dl>
