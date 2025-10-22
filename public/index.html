@@ -604,64 +604,13 @@
                 <figure id="clients">
                     <div class="client-tabs">
                         <div class="tab-buttons">
-                            <button class="tab-button active" data-tab="copilot-xcode">GitHub Copilot for Xcode</button>
-                            <button class="tab-button" data-tab="cursor">Cursor</button>
-                            <button class="tab-button" data-tab="vscode">VSCode</button>
-                            <button class="tab-button" data-tab="claude-desktop">Claude Desktop</button>
+                            <button class="tab-button active" data-tab="vscode">VSCode</button>
                             <button class="tab-button" data-tab="claude-code">Claude Code</button>
-                            <button class="tab-button" data-tab="other">Other</button>
+                            <button class="tab-button" data-tab="enchanted">Enchanted</button>
                         </div>
 
                         <div class="tab-content">
-                            <div class="tab-pane active" id="copilot-xcode-tab">
-                                <h3>GitHub Copilot for Xcode</h3>
-                                <ol>
-                                    <li>Open <strong>GitHub Copilot for Xcode</strong> and go to
-                                        <strong>Settings…</strong>
-                                    </li>
-                                    <li>Select the <strong>MCP</strong> tab</li>
-                                    <li>Click <span>
-                                            <img class="icon" src="/icons/square.and.pencil.svg" alt="Edit Config"
-                                                width="16" height="16" />
-                                            Edit Config
-                                        </span></li>
-                                    <li>Enter the following configuration:</li>
-                                </ol>
-                                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
-<span class="dimmed">  <span class="key">"servers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>  <span class="supportify-entry">    <span class="key">"supportify"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-      <span class="key">"type"</span><span class="punctuation">:</span> <span class="string">"http"</span><span class="punctuation">,</span>
-      <span class="key">"url"</span><span class="punctuation">:</span> <span class="string">"http://localhost:51345/mcp"</span>
-    <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
-<span class="dimmed"><span class="punctuation">}</span></span></code></pre>
-                                <p>For more information, see the <a href="https://github.com/github/CopilotForXcode"
-                                        rel="noopener noreferrer">GitHub Copilot for Xcode README</a>.</p>
-                            </div>
-
-                            <div class="tab-pane" id="cursor-tab">
-                                <h3>Cursor</h3>
-                                <p>Add Supportify MCP to your Cursor settings:</p>
-                                <ol>
-                                    <li>Open <strong>Cursor Settings</strong></li>
-                                    <li>Go to <strong>Features → MCP</strong></li>
-                                    <li>Add the following configuration:</li>
-                                </ol>
-                                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
-<span class="dimmed">  <span class="key">"mcpServers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>
-<span class="supportify-entry">    <span class="key">"supportify"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-      <span class="key">"command"</span><span class="punctuation">:</span> <span class="string">"npx"</span><span class="punctuation">,</span>
-      <span class="key">"args"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-        <span class="string">"-y"</span><span class="punctuation">,</span>
-        <span class="string">"mcp-remote"</span><span class="punctuation">,</span>
-        <span class="string">"http://localhost:51345/mcp"</span>
-      <span class="punctuation">]</span>
-    <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
-<span class="dimmed"><span class="punctuation">}</span></span></code></pre>
-
-                                <p>For more information, see the <a href="https://www.cursor.com/docs/install-mcp"
-                                        rel="noopener noreferrer">Cursor documentation</a>.</p>
-                            </div>
-
-                            <div class="tab-pane" id="vscode-tab">
+                            <div class="tab-pane active" id="vscode-tab">
                                 <h3>VSCode</h3>
                                 <p>Create a <code>.vscode/mcp.json</code> file in your workspace and enter the following
                                     configuration:</p>
@@ -678,26 +627,6 @@
                                         rel="noopener noreferrer">VSCode documentation</a>.</p>
                             </div>
 
-                            <div class="tab-pane" id="claude-desktop-tab">
-                                <h3>Claude Desktop</h3>
-                                <p>Add the following to your Claude Desktop MCP settings file:</p>
-                                <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
-<span class="dimmed">  <span class="key">"mcpServers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>
-<span class="supportify-entry">    <span class="key">"supportify"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-      <span class="key">"command"</span><span class="punctuation">:</span> <span class="string">"npx"</span><span class="punctuation">,</span>
-      <span class="key">"args"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-        <span class="string">"-y"</span><span class="punctuation">,</span>
-        <span class="string">"mcp-remote"</span><span class="punctuation">,</span>
-        <span class="string">"http://localhost:51345/mcp"</span>
-      <span class="punctuation">]</span>
-    <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
-<span class="dimmed"><span class="punctuation">}</span></span></code></pre>
-                                <p>See the <a
-                                        href="https://support.anthropic.com/en/articles/11725091-when-to-use-desktop-and-web-connectors"
-                                        rel="noopener noreferrer">Claude Desktop documentation</a> for more information.
-                                </p>
-                            </div>
-
                             <div class="tab-pane" id="claude-code-tab">
                                 <h3>Claude Code</h3>
                                 <p>Run the following command in your terminal:</p>
@@ -708,26 +637,31 @@
                                 </p>
                             </div>
 
-                            <div class="tab-pane" id="other-tab">
-                                <h3>Other MCP Clients</h3>
-                                <p>Supportify's MCP server supports Streamable HTTP and Server-Sent Events (SSE) transport.
-                                    If your client supports either of these,
-                                    configure it to connect directly to <code>http://localhost:51345/mcp</code> (or your deployed URL).</p>
-
-                                <p>Otherwise,
-                                    you can run this command to proxy over stdio:</p>
-
+                            <div class="tab-pane" id="enchanted-tab">
+                                <h3>Enchanted</h3>
+                                <p>Add the following to your Enchanted MCP settings:</p>
                                 <pre><code class="mcp-config"><span class="dimmed"><span class="punctuation">{</span></span>
-<span class="dimmed">  <span class="key">"mcpServers"</span><span class="punctuation">:</span> <span class="punctuation">{</span></span>
-<span class="supportify-entry">    <span class="key">"supportify"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
-      <span class="key">"command"</span><span class="punctuation">:</span> <span class="string">"npx"</span><span class="punctuation">,</span>
-      <span class="key">"args"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
-        <span class="string">"-y"</span><span class="punctuation">,</span>
-        <span class="string">"mcp-remote"</span><span class="punctuation">,</span>
-        <span class="string">"http://localhost:51345/mcp"</span>
-      <span class="punctuation">]</span>
-    <span class="punctuation">}</span></span><span class="dimmed">  <span class="punctuation">}</span></span>
-<span class="dimmed"><span class="punctuation">}</span></span></code></pre>
+<span class="supportify-entry">  <span class="key">"supportify"</span><span class="punctuation">:</span> <span class="punctuation">{</span>
+    <span class="key">"command"</span><span class="punctuation">:</span> <span class="string">"npx"</span><span class="punctuation">,</span>
+    <span class="key">"args"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+      <span class="string">"mcp-remote"</span><span class="punctuation">,</span>
+      <span class="string">"http://localhost:51345/mcp"</span>
+    <span class="punctuation">]</span><span class="punctuation">,</span>
+    <span class="key">"alwaysAllow"</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+      <span class="string">"searchAppleSupportGuide"</span><span class="punctuation">,</span>
+      <span class="string">"fetchAppleSupportGuide"</span><span class="punctuation">,</span>
+      <span class="string">"searchAppleSupportTraining"</span><span class="punctuation">,</span>
+      <span class="string">"fetchAppleSupportTraining"</span><span class="punctuation">,</span>
+      <span class="string">"listAppleSupportTrainingCatalog"</span><span class="punctuation">,</span>
+      <span class="string">"searchAppleDeploymentTraining"</span><span class="punctuation">,</span>
+      <span class="string">"fetchAppleDeploymentTraining"</span><span class="punctuation">,</span>
+      <span class="string">"listAppleDeploymentTrainingCatalog"</span>
+    <span class="punctuation">]</span><span class="punctuation">,</span>
+    <span class="key">"env"</span><span class="punctuation">:</span> <span class="punctuation">{</span><span class="punctuation">}</span><span class="punctuation">,</span>
+    <span class="key">"disabled"</span><span class="punctuation">:</span> <span class="string">false</span>
+  <span class="punctuation">}</span></span><span class="dimmed"><span class="punctuation">}</span></span></code></pre>
+                                <p>For more information, see the <a href="https://github.com/AugustDev/enchanted"
+                                        rel="noopener noreferrer">Enchanted documentation</a>.</p>
                             </div>
                         </div>
                     </div>
