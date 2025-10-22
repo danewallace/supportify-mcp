@@ -72,3 +72,4 @@ mcp_workflow.json
 !.dev.vars.example
 .env*
 !.env.example
+test_full_content.py

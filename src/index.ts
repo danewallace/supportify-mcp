@@ -379,6 +379,13 @@ app.onError((err, c) => {
 
   if (err instanceof HTTPException) {
     // Get the custom response
+    if (err.res && err.res.status === 200) {
+      // If HTTPException contains a successful response (status 200), return it directly.
+      // This is a workaround for cases where the transport incorrectly throws 406
+      // despite a successful underlying operation.
+      return err.res
+    }
+    // Otherwise, get the custom response from the HTTPException
     return err.getResponse()
   }
 
