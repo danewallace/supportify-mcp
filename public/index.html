@@ -783,44 +783,76 @@
                     </li>
                 </ul>
 
-                <h4>Training Tutorial Tools</h4>
+                <h4>Device Support Training Tools</h4>
                 <ul>
                     <li>
                         <dl>
-                            <dt><code>searchAppleTraining</code></dt>
-                            <dd><strong>Search for training tutorials in Apple Device Support and Deployment courses</strong>
+                            <dt><code>searchAppleSupportTraining</code></dt>
+                            <dd><strong>Search Device Support training tutorials</strong>
                                 <br>Parameters:
                                 <ul>
-                                    <li><code>query</code> (string): Search query (e.g., "backup", "wifi troubleshooting", "mdm")</li>
-                                    <li><code>catalog</code> (enum, optional): "apt-support", "apt-deployment", or "both" (default)</li>
+                                    <li><code>query</code> (string): Search query (e.g., "backup", "wifi troubleshooting")</li>
                                     <li><code>platform</code> (enum, optional): "iphone", "ipad", "mac", or "all"</li>
                                 </ul>
-                                <br><em>Returns list of matching tutorials with IDs, titles, durations, and URLs</em>
+                                <br><em>Searches 40+ tutorials (14hr 15min) covering iPhone, iPad, and Mac support</em>
                             </dd>
                         </dl>
                     </li>
                     <li>
                         <dl>
-                            <dt><code>fetchAppleTraining</code></dt>
-                            <dd><strong>Fetch a specific training tutorial by ID</strong>
+                            <dt><code>fetchAppleSupportTraining</code></dt>
+                            <dd><strong>Fetch a specific Device Support tutorial by ID</strong>
                                 <br>Parameters:
                                 <ul>
-                                    <li><code>tutorialId</code> (string): Tutorial ID from search results (e.g., "sup005" for support, "dm005" for deployment)</li>
-                                    <li><code>catalog</code> (enum, optional): "apt-support" or "apt-deployment" (default: "apt-support")</li>
+                                    <li><code>tutorialId</code> (string): Tutorial ID (e.g., "sup005", "sup110")</li>
                                 </ul>
-                                <br><em>Returns full tutorial content as markdown including overview, sections, tasks, and assessments</em>
+                                <br><em>Returns full tutorial content as markdown</em>
                             </dd>
                         </dl>
                     </li>
                     <li>
                         <dl>
-                            <dt><code>listAppleTrainingCatalog</code></dt>
-                            <dd><strong>Get the complete training course structure</strong>
+                            <dt><code>listAppleSupportTrainingCatalog</code></dt>
+                            <dd><strong>Get the Device Support course structure</strong>
+                                <br>Parameters: None
+                                <br><em>Returns all volumes, chapters, and 40+ tutorials</em>
+                            </dd>
+                        </dl>
+                    </li>
+                </ul>
+
+                <h4>Deployment Training Tools</h4>
+                <ul>
+                    <li>
+                        <dl>
+                            <dt><code>searchAppleDeploymentTraining</code></dt>
+                            <dd><strong>Search Deployment & Management training tutorials</strong>
                                 <br>Parameters:
                                 <ul>
-                                    <li><code>catalog</code> (enum, optional): "apt-support" or "apt-deployment" (default: "apt-support")</li>
+                                    <li><code>query</code> (string): Search query (e.g., "mdm", "configuration profiles")</li>
                                 </ul>
-                                <br><em>Returns full course structure with all volumes, chapters, and tutorials</em>
+                                <br><em>Searches 50+ tutorials (11hr 45min) covering MDM and deployment</em>
+                            </dd>
+                        </dl>
+                    </li>
+                    <li>
+                        <dl>
+                            <dt><code>fetchAppleDeploymentTraining</code></dt>
+                            <dd><strong>Fetch a specific Deployment tutorial by ID</strong>
+                                <br>Parameters:
+                                <ul>
+                                    <li><code>tutorialId</code> (string): Tutorial ID (e.g., "dm005", "dm110")</li>
+                                </ul>
+                                <br><em>Returns full tutorial content as markdown</em>
+                            </dd>
+                        </dl>
+                    </li>
+                    <li>
+                        <dl>
+                            <dt><code>listAppleDeploymentTrainingCatalog</code></dt>
+                            <dd><strong>Get the Deployment Training course structure</strong>
+                                <br>Parameters: None
+                                <br><em>Returns all volumes, chapters, and 50+ tutorials</em>
                             </dd>
                         </dl>
                     </li>

@@ -6,8 +6,6 @@ import {
   fetchTrainingTutorialContent,
   getTrainingStructure,
   searchTrainingTutorials,
-  type TrainingCatalogType,
-  type TrainingSearchResult,
 } from "./training"
 
 export function createMcpServer() {
@@ -206,28 +204,21 @@ export function createMcpServer() {
   )
 
   // ============================================================================
-  // APPLE TRAINING TUTORIALS
+  // APPLE SUPPORT TRAINING (apt-support)
   // ============================================================================
 
-  // Register search training tool
+  // Register search support training tool
   server.registerTool(
-    "searchAppleTraining",
+    "searchAppleSupportTraining",
     {
       title: "Search Apple Device Support Training",
       description:
-        "Search for training tutorials in Apple Device Support and Deployment courses (it-training.apple.com). Covers iPhone, iPad, and Mac troubleshooting, setup, networking, security, diagnostics, MDM, and deployment. Use this to find official Apple training content for help desk staff and IT administrators.",
+        "Search for training tutorials in Apple Device Support course (it-training.apple.com/tutorials/apt-support). Covers iPhone, iPad, and Mac troubleshooting, setup, networking, security, and diagnostics. 40+ tutorials, 14hr 15min total. Use this to find official Apple training content for help desk staff.",
       inputSchema: {
         query: z
           .string()
           .describe(
-            "Search query (e.g., 'backup iphone', 'wifi troubleshooting mac', 'mdm enrollment', 'filevault')",
-          ),
-        catalog: z
-          .enum(["apt-support", "apt-deployment", "both"])
-          .optional()
-          .default("both")
-          .describe(
-            'Training catalog: "apt-support" (device support/troubleshooting), "apt-deployment" (MDM/deployment), or "both" (default)',
+            "Search query (e.g., 'backup iphone', 'wifi troubleshooting mac', 'filevault')",
           ),
         platform: z
           .enum(["iphone", "ipad", "mac", "all"])
@@ -241,80 +232,51 @@ export function createMcpServer() {
         openWorldHint: true,
       },
     },
-    async ({ query, catalog = "both", platform }) => {
+    async ({ query, platform }) => {
       try {
-        // Search in one or both catalogs
-        const catalogsToSearch: TrainingCatalogType[] =
-          catalog === "both" ? ["apt-support", "apt-deployment"] : [catalog as TrainingCatalogType]
+        const results = await searchTrainingTutorials(query, {
+          platform: platform || "all",
+          catalog: "apt-support",
+        })
 
-        const allResults: Array<{
-          catalogType: TrainingCatalogType
-          results: TrainingSearchResult[]
-        }> = []
-
-        for (const catalogType of catalogsToSearch) {
-          const results = await searchTrainingTutorials(query, {
-            platform: platform || "all",
-            catalog: catalogType,
-          })
-          if (results.length > 0) {
-            allResults.push({ catalogType, results })
-          }
-        }
-
-        const totalResults = allResults.reduce((sum, item) => sum + item.results.length, 0)
-
-        if (totalResults === 0) {
+        if (results.length === 0) {
           return {
             content: [
               {
                 type: "text" as const,
-                text: `No training tutorials found for "${query}"${platform && platform !== "all" ? ` on ${platform}` : ""}.`,
+                text: `No support training tutorials found for "${query}"${platform && platform !== "all" ? ` on ${platform}` : ""}.`,
               },
             ],
           }
         }
 
         // Format results as markdown
-        let markdown = `# Apple Training Results: "${query}"\n\n`
-        markdown += `Found ${totalResults} tutorial${totalResults === 1 ? "" : "s"}:\n\n`
+        let markdown = `# Apple Device Support Training Results: "${query}"\n\n`
+        markdown += `Found ${results.length} tutorial${results.length === 1 ? "" : "s"}:\n\n`
 
-        for (const { catalogType, results } of allResults) {
-          const catalogTitle =
-            catalogType === "apt-support"
-              ? "Apple Device Support Training"
-              : "Apple Deployment & Management Training"
-          markdown += `## ${catalogTitle}\n\n`
-
-          for (const result of results.slice(0, 10)) {
-            markdown += `### ${result.title}\n`
-            markdown += `- **ID**: \`${result.tutorialId}\`\n`
-            markdown += `- **Catalog**: \`${catalogType}\`\n`
-            markdown += `- **Type**: ${result.kind}\n`
-            if (result.estimatedTime) {
-              markdown += `- **Duration**: ${result.estimatedTime}\n`
-            }
-            if (result.volume) {
-              markdown += `- **Volume**: ${result.volume}\n`
-            }
-            if (result.chapter) {
-              markdown += `- **Chapter**: ${result.chapter}\n`
-            }
-            markdown += `- **URL**: ${result.url}\n`
-            markdown += `\n${result.abstract}\n\n`
+        for (const result of results.slice(0, 10)) {
+          markdown += `## ${result.title}\n`
+          markdown += `- **ID**: \`${result.tutorialId}\`\n`
+          markdown += `- **Type**: ${result.kind}\n`
+          if (result.estimatedTime) {
+            markdown += `- **Duration**: ${result.estimatedTime}\n`
           }
-
-          if (results.length > 10) {
-            markdown += `\n*Showing top 10 of ${results.length} results from ${catalogTitle}*\n\n`
+          if (result.volume) {
+            markdown += `- **Volume**: ${result.volume}\n`
           }
+          if (result.chapter) {
+            markdown += `- **Chapter**: ${result.chapter}\n`
+          }
+          markdown += `- **URL**: ${result.url}\n`
+          markdown += `\n${result.abstract}\n\n`
         }
 
-        // Get the first result from the first catalog
-        const firstResult = allResults[0].results[0]
-        const firstCatalog = allResults[0].catalogType
+        if (results.length > 10) {
+          markdown += `\n*Showing top 10 of ${results.length} results*\n`
+        }
 
-        markdown += `\n---\n\n**Next step**: Use the \`fetchAppleTraining\` tool with the tutorial ID and catalog from the most relevant result above.\n`
-        markdown += `For example: \`fetchAppleTraining({ tutorialId: "${firstResult.tutorialId}", catalog: "${firstCatalog}" })\`\n`
+        markdown += `\n---\n\n**Next step**: Use \`fetchAppleSupportTraining\` with the tutorial ID from the most relevant result above.\n`
+        markdown += `For example: \`fetchAppleSupportTraining({ tutorialId: "${results[0].tutorialId}" })\`\n`
 
         return {
           content: [
@@ -331,7 +293,7 @@ export function createMcpServer() {
           content: [
             {
               type: "text" as const,
-              text: `Error searching Apple training for "${query}": ${errorMessage}`,
+              text: `Error searching Apple support training for "${query}": ${errorMessage}`,
             },
           ],
         }
@@ -339,24 +301,19 @@ export function createMcpServer() {
     },
   )
 
-  // Register fetch training tutorial tool
+  // Register fetch support training tutorial tool
   server.registerTool(
-    "fetchAppleTraining",
+    "fetchAppleSupportTraining",
     {
-      title: "Fetch Apple Training Tutorial",
+      title: "Fetch Apple Device Support Training Tutorial",
       description:
-        "Fetch a specific Apple Device Support or Deployment training tutorial by ID. Returns full tutorial content as markdown including overview, sections, tasks, and assessments. Use searchAppleTraining first to find the correct tutorial ID and catalog. IMPORTANT: When using this information, cite the source URL.",
+        "Fetch a specific Apple Device Support training tutorial by ID. Returns full tutorial content as markdown including overview, sections, tasks, and assessments. Use searchAppleSupportTraining first to find the correct tutorial ID. IMPORTANT: When using this information, cite the source URL.",
       inputSchema: {
         tutorialId: z
           .string()
           .describe(
-            "Tutorial ID from search results (e.g., 'sup005', 'sup110', 'dep100'). Get this from searchAppleTraining first.",
+            "Tutorial ID from search results (e.g., 'sup005', 'sup110', 'sup530'). Get this from searchAppleSupportTraining first.",
           ),
-        catalog: z
-          .enum(["apt-support", "apt-deployment"])
-          .optional()
-          .default("apt-support")
-          .describe('Training catalog: "apt-support" or "apt-deployment"'),
       },
       annotations: {
         readOnlyHint: true,
@@ -365,10 +322,10 @@ export function createMcpServer() {
         openWorldHint: true,
       },
     },
-    async ({ tutorialId, catalog = "apt-support" }) => {
+    async ({ tutorialId }) => {
       try {
         // Fetch full tutorial content as markdown
-        const markdown = await fetchTrainingTutorialContent(tutorialId, catalog)
+        const markdown = await fetchTrainingTutorialContent(tutorialId, "apt-support")
 
         return {
           content: [
@@ -385,7 +342,7 @@ export function createMcpServer() {
           content: [
             {
               type: "text" as const,
-              text: `Error fetching training tutorial "${tutorialId}": ${errorMessage}\n\nTip: Use searchAppleTraining first to find the correct tutorial ID.`,
+              text: `Error fetching support training tutorial "${tutorialId}": ${errorMessage}\n\nTip: Use searchAppleSupportTraining first to find the correct tutorial ID.`,
             },
           ],
         }
@@ -393,22 +350,14 @@ export function createMcpServer() {
     },
   )
 
-  // Register list training catalog tool
+  // Register list support training catalog tool
   server.registerTool(
-    "listAppleTrainingCatalog",
+    "listAppleSupportTrainingCatalog",
     {
-      title: "List Apple Training Course Structure",
+      title: "List Apple Device Support Training Course Structure",
       description:
-        "Get the complete structure of Apple Device Support or Deployment training courses, including all volumes, chapters, and tutorials. Useful for understanding the full curriculum and finding tutorials by topic area.",
-      inputSchema: {
-        catalog: z
-          .enum(["apt-support", "apt-deployment"])
-          .optional()
-          .default("apt-support")
-          .describe(
-            'Training catalog: "apt-support" (device support/troubleshooting) or "apt-deployment" (MDM/deployment)',
-          ),
-      },
+        "Get the complete structure of the Apple Device Support training course, including all volumes, chapters, and tutorials. 40+ tutorials, 14hr 15min total. Useful for understanding the full curriculum and finding tutorials by topic area.",
+      inputSchema: {},
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -416,9 +365,9 @@ export function createMcpServer() {
         openWorldHint: true,
       },
     },
-    async ({ catalog = "apt-support" }) => {
+    async () => {
       try {
-        const structure = await getTrainingStructure(catalog)
+        const structure = await getTrainingStructure("apt-support")
 
         // Format catalog as markdown
         let markdown = `# ${structure.title}\n\n`
@@ -450,8 +399,8 @@ export function createMcpServer() {
 
         markdown += `---\n\n`
         markdown += `**Next steps**:\n`
-        markdown += `- Use \`searchAppleTraining\` to find tutorials by topic\n`
-        markdown += `- Use \`fetchAppleTraining\` with a tutorial ID to get details\n`
+        markdown += `- Use \`searchAppleSupportTraining\` to find tutorials by topic\n`
+        markdown += `- Use \`fetchAppleSupportTraining\` with a tutorial ID to get details\n`
 
         return {
           content: [
@@ -469,6 +418,221 @@ export function createMcpServer() {
             {
               type: "text" as const,
               text: `Error fetching training catalog: ${errorMessage}`,
+            },
+          ],
+        }
+      }
+    },
+  )
+
+  // ============================================================================
+  // APPLE DEPLOYMENT TRAINING (apt-deployment)
+  // ============================================================================
+
+  // Register search deployment training tool
+  server.registerTool(
+    "searchAppleDeploymentTraining",
+    {
+      title: "Search Apple Deployment Training",
+      description:
+        "Search for training tutorials in Apple Deployment & Management course (it-training.apple.com/tutorials/apt-deployment). Covers MDM, device enrollment, management, deployment, and security. 50+ tutorials, 11hr 45min total. Use this to find official Apple training content for IT administrators.",
+      inputSchema: {
+        query: z
+          .string()
+          .describe("Search query (e.g., 'mdm enrollment', 'configuration profiles', 'filevault')"),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ query }) => {
+      try {
+        const results = await searchTrainingTutorials(query, {
+          catalog: "apt-deployment",
+        })
+
+        if (results.length === 0) {
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text: `No deployment training tutorials found for "${query}".`,
+              },
+            ],
+          }
+        }
+
+        // Format results as markdown
+        let markdown = `# Apple Deployment Training Results: "${query}"\n\n`
+        markdown += `Found ${results.length} tutorial${results.length === 1 ? "" : "s"}:\n\n`
+
+        for (const result of results.slice(0, 10)) {
+          markdown += `## ${result.title}\n`
+          markdown += `- **ID**: \`${result.tutorialId}\`\n`
+          markdown += `- **Type**: ${result.kind}\n`
+          if (result.estimatedTime) {
+            markdown += `- **Duration**: ${result.estimatedTime}\n`
+          }
+          if (result.volume) {
+            markdown += `- **Volume**: ${result.volume}\n`
+          }
+          if (result.chapter) {
+            markdown += `- **Chapter**: ${result.chapter}\n`
+          }
+          markdown += `- **URL**: ${result.url}\n`
+          markdown += `\n${result.abstract}\n\n`
+        }
+
+        if (results.length > 10) {
+          markdown += `\n*Showing top 10 of ${results.length} results*\n`
+        }
+
+        markdown += `\n---\n\n**Next step**: Use \`fetchAppleDeploymentTraining\` with the tutorial ID from the most relevant result above.\n`
+        markdown += `For example: \`fetchAppleDeploymentTraining({ tutorialId: "${results[0].tutorialId}" })\`\n`
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error searching Apple deployment training for "${query}": ${errorMessage}`,
+            },
+          ],
+        }
+      }
+    },
+  )
+
+  // Register fetch deployment training tutorial tool
+  server.registerTool(
+    "fetchAppleDeploymentTraining",
+    {
+      title: "Fetch Apple Deployment Training Tutorial",
+      description:
+        "Fetch a specific Apple Deployment & Management training tutorial by ID. Returns full tutorial content as markdown including overview, sections, tasks, and assessments. Use searchAppleDeploymentTraining first to find the correct tutorial ID. IMPORTANT: When using this information, cite the source URL.",
+      inputSchema: {
+        tutorialId: z
+          .string()
+          .describe(
+            "Tutorial ID from search results (e.g., 'dm005', 'dm110', 'dm530'). Get this from searchAppleDeploymentTraining first.",
+          ),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async ({ tutorialId }) => {
+      try {
+        // Fetch full tutorial content as markdown
+        const markdown = await fetchTrainingTutorialContent(tutorialId, "apt-deployment")
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error fetching deployment training tutorial "${tutorialId}": ${errorMessage}\n\nTip: Use searchAppleDeploymentTraining first to find the correct tutorial ID.`,
+            },
+          ],
+        }
+      }
+    },
+  )
+
+  // Register list deployment training catalog tool
+  server.registerTool(
+    "listAppleDeploymentTrainingCatalog",
+    {
+      title: "List Apple Deployment Training Course Structure",
+      description:
+        "Get the complete structure of the Apple Deployment & Management training course, including all volumes, chapters, and tutorials. 50+ tutorials, 11hr 45min total. Useful for understanding the full curriculum and finding tutorials by topic area.",
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async () => {
+      try {
+        const structure = await getTrainingStructure("apt-deployment")
+
+        // Format catalog as markdown
+        let markdown = `# ${structure.title}\n\n`
+
+        if (structure.estimatedTime) {
+          markdown += `**Total Duration**: ${structure.estimatedTime}\n\n`
+        }
+
+        markdown += `## Course Structure\n\n`
+
+        for (const volume of structure.volumes) {
+          markdown += `### ${volume.name}\n\n`
+
+          for (const chapter of volume.chapters) {
+            markdown += `#### ${chapter.name}\n\n`
+
+            if (chapter.tutorials.length > 0) {
+              for (const tutorial of chapter.tutorials) {
+                markdown += `- **${tutorial.title}** (\`${tutorial.id}\`)`
+                if (tutorial.estimatedTime) {
+                  markdown += ` - ${tutorial.estimatedTime}`
+                }
+                markdown += `\n`
+              }
+              markdown += `\n`
+            }
+          }
+        }
+
+        markdown += `---\n\n`
+        markdown += `**Next steps**:\n`
+        markdown += `- Use \`searchAppleDeploymentTraining\` to find tutorials by topic\n`
+        markdown += `- Use \`fetchAppleDeploymentTraining\` with a tutorial ID to get details\n`
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: markdown,
+            },
+          ],
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Error fetching deployment training catalog: ${errorMessage}`,
             },
           ],
         }
